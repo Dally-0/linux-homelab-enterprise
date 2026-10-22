@@ -28,6 +28,9 @@ services:
     environment:
       DHCP_SUBNET: ${DHCP_SUBNET:-192.168.0.0/24}
       DHCP_POOL: ${DHCP_POOL:-192.168.0.100 - 192.168.0.199}
+      # Vacío = detectar la interfaz de la ruta por defecto (recomendado).
+      # Solo hace falta fijarla si el host tiene varias NIC.
+      DHCP_INTERFACE: ${DHCP_INTERFACE:-}
       DHCP_DNS: ${DHCP_DNS:-192.168.0.2}
       DHCP_GATEWAY: ${DHCP_GATEWAY:-192.168.0.1}
       DHCP_NTP: ${DHCP_NTP:-192.168.0.2}

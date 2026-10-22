@@ -9,9 +9,14 @@ se aplica desde el repo; nadie toca el server a mano.
 ```text
 server/
 ├── README.md        ← este archivo
+├── bootstrap.sh     ← deja dc1 operativo de punta a punta (idempotente)
+├── set-ip.sh        ← fija la IP de dc1 (192.168.0.2) con rollback automático
+├── gen-env.sh       ← crea/completa .env con secretos aleatorios
 ├── nftables.conf    ← firewall red única 192.168.0.0/24 (política drop)
 ├── sshd_config      ← SSH endurecido (solo claves, solo admins)
 ├── chrony.conf      ← NTP de la red (los clientes sincronizan contra el DC)
+├── backup.sh        ← backup con restic (cron diario)
+├── restore.sh       ← restaurar desde el repo de restic
 ├── radius/          ← FreeRADIUS nativo (WiFi WPA2-Enterprise / 802.1X)
 │   ├── clients.conf     ← clientes RADIUS (router + localhost)
 │   ├── mod-mschap       ← MSCHAPv2 contra el AD vía ntlm_auth
@@ -20,6 +25,21 @@ server/
 │   └── README.md
 └── deploy.sh        ← valida y aplica los configs de forma segura
 ```
+
+## Puesta en marcha desde cero
+
+```bash
+git pull
+sudo bash server/set-ip.sh --yes --commit   # IP fija .2 (reconectar SSH a .2)
+# APAGAR el DHCP del router TP-Link antes del paso siguiente
+sudo bash server/bootstrap.sh               # paquetes + AD + DNS + NTP + RADIUS + contenedores
+```
+
+`bootstrap.sh` es idempotente y hace: preflight → hostname `dc1`/`/etc/hosts`/
+timezone → paquetes → chrony → `.env` con secretos → Samba AD
+(`dc/provision.sh` + usuarios + política) → `/etc/resolv.conf` al DC →
+permisos de shares → certs TLS → `deploy.sh`. Admite `--check` (solo
+diagnóstico) y `--skip-ad` (AD ya provisionado).
 
 ## Flujo de trabajo
 

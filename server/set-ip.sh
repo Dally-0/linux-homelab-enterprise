@@ -5,8 +5,12 @@
 # GUÍA DE USO
 # -----------
 #   sudo bash server/set-ip.sh              # aplica la IP fija (pide confirmación)
-#   sudo bash server/set-ip.sh --yes        # sin confirmación (para automatizar)
+#   sudo bash server/set-ip.sh --yes --commit   # automatizable: aplica y NO
+#                                               # vuelve a DHCP (confirmado)
+#   sudo bash server/set-ip.sh --yes        # sin preguntar, pero con rollback
+#                                           # automático si no confirmás
 #   sudo bash server/set-ip.sh --dry-run    # muestra qué haría, no toca nada
+#   sudo bash server/set-ip.sh --force      # re-aplica aunque ya esté puesta
 #   sudo bash server/set-ip.sh --rollback   # vuelve a la config guardada (DHCP)
 #   bash server/set-ip.sh --help            # esta ayuda
 #
@@ -57,6 +61,8 @@ UNIT=tso-ip-rollback
 DRY_RUN=0
 ASSUME_YES=0
 DO_ROLLBACK=0
+COMMIT=0
+FORCE=0
 
 usage() {
     awk 'f && /^# =====/{exit} f{sub(/^# ?/,""); print} /^# =====/{f=1}' "$0"
@@ -67,6 +73,8 @@ for arg in "$@"; do
         -h|--help)     usage; exit 0 ;;
         --dry-run)     DRY_RUN=1 ;;
         -y|--yes)      ASSUME_YES=1 ;;
+        --commit)      COMMIT=1 ;;
+        --force)       FORCE=1 ;;
         --rollback)    DO_ROLLBACK=1 ;;
         *) echo "Opción desconocida: $arg (usá --help)" >&2; exit 2 ;;
     esac
@@ -114,6 +122,16 @@ ip link show "$IFACE" >/dev/null 2>&1 || die "no existe la interfaz $IFACE"
 
 CUR_IP="$(ip -4 -br a show "$IFACE" | awk '{print $3}')"
 log "==> Estado actual: $IFACE = ${CUR_IP:-sin IP}  →  objetivo: $IP/$PREFIX (gw $GATEWAY)"
+
+# Ya configurada: no se toca nada (y NO se programa rollback, que si no
+# revertiría a DHCP a los 5 minutos sin que nadie lo pida).
+if [[ "$CUR_IP" == "$IP/$PREFIX" && $FORCE -eq 0 && $DRY_RUN -eq 0 ]]; then
+    log "==> La IP $IP/$PREFIX ya está configurada en $IFACE. Nada que hacer."
+    ip -4 -br a show "$IFACE"
+    ip r | awk '/^default/{print "    " $0}'
+    log "    (usá --force para re-aplicar, o --rollback para volver a DHCP)"
+    exit 0
+fi
 
 # ─── [1/6] IP libre ─────────────────────────────────────────────────
 log "==> [1/6] Verificando que $IP esté libre ..."
@@ -220,6 +238,16 @@ if [[ $DRY_RUN -eq 0 ]]; then
     else
         log "    AVISO: el gateway $GATEWAY NO responde (¿cable/bridge?)"
     fi
+fi
+
+# ─── Confirmación automática (--commit) ─────────────────────────────
+if [[ $COMMIT -eq 1 && $DRY_RUN -eq 0 ]]; then
+    mkdir -p /run
+    touch "$OK_FLAG"
+    systemctl stop "$UNIT.timer" 2>/dev/null || true
+    systemctl reset-failed "$UNIT.service" 2>/dev/null || true
+    log "==> --commit: cambio confirmado (rollback automático cancelado)"
+    exit 0
 fi
 
 cat <<EOF

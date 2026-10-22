@@ -16,6 +16,22 @@ NTP_SRV="${DHCP_NTP:-192.168.0.2}"
 
 CONF="/etc/kea/kea-dhcp4.conf"
 
+# ── Interfaz de escucha ──────────────────────────────────────────────
+# Antes estaba hardcodeada ("eno1") y Kea no arrancaba en cualquier otra
+# máquina (p.ej. enp0s3). Con network_mode: host, /proc y /sys son los del
+# host → se detecta la interfaz de la ruta por defecto.
+# Override manual: DHCP_INTERFACE=enp0s3 en .env
+IFACE="${DHCP_INTERFACE:-}"
+if [ -z "${IFACE}" ]; then
+    # Ruta por defecto en /proc/net/route: Destination (campo 2) = 0.
+    IFACE="$(awk '$2=="00000000" {print $1; exit}' /proc/net/route 2>/dev/null || true)"
+fi
+if [ -z "${IFACE}" ] || [ ! -d "/sys/class/net/${IFACE}" ]; then
+    echo ">>> AVISO: no detecté la interfaz de la ruta por defecto; escucho en todas (*)"
+    IFACE="*"
+fi
+echo ">>> Interfaz de escucha: ${IFACE}"
+
 # Directorios de runtime y de concesiones (Kea corre como usuario _kea)
 mkdir -p /run/kea /var/lib/kea
 chown -R _kea:_kea /run/kea /var/lib/kea
@@ -50,6 +66,7 @@ fi
 
 # Reemplazar tokens de la plantilla
 sed -i \
+    -e "s|__DHCP_IFACE__|${IFACE}|g" \
     -e "s|__DHCP_SUBNET__|${SUB}|g" \
     -e "s|__DHCP_POOL__|${POOL}|g" \
     -e "s|__DHCP_DNS__|${DNS_SRV}|g" \
@@ -61,6 +78,7 @@ sed -i \
 
 echo "============================================"
 echo "  DHCP Kea"
+echo "  Interfaz: ${IFACE}"
 echo "  Subred:   ${SUB}"
 echo "  Pool:     ${POOL}"
 echo "  DNS:      ${DNS_SRV}"

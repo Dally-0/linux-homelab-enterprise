@@ -17,17 +17,70 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
 
+# ─── [0/7] Paquetes base (idempotente) ──────────────────────────────
+# Sin nftables no se puede aplicar el firewall; sin chrony el paso 5
+# fallaba y abortaba el deploy (set -e). Se instalan solo si faltan.
+NEED_PKGS=()
+command -v nft     >/dev/null 2>&1 || NEED_PKGS+=(nftables)
+command -v chronyd >/dev/null 2>&1 || NEED_PKGS+=(chrony)
+if [ "${#NEED_PKGS[@]}" -gt 0 ]; then
+    echo "==> [0/7] Instalando paquetes base: ${NEED_PKGS[*]} ..."
+    sudo apt-get update -qq
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${NEED_PKGS[@]}"
+    # chrony y systemd-timesyncd se pelean por el reloj y por el puerto 123.
+    if systemctl is-enabled systemd-timesyncd >/dev/null 2>&1; then
+        sudo systemctl disable --now systemd-timesyncd || true
+        echo "    systemd-timesyncd deshabilitado (chrony es el NTP del dominio)"
+    fi
+else
+    echo "==> [0/7] Paquetes base OK (nftables, chrony)"
+fi
+
 echo "==> [1/7] Validando sintaxis de nftables.conf ..."
-if sudo nft -c -f "$DIR/nftables.conf" 2>/dev/null; then
+# Se aplica una copia con las IPs extra de administración (ADMIN_IPS_EXTRA
+# en .env): sin esto, si estás conectado por SSH desde una IP que no está
+# en admin_ips (.50–.52), el firewall te deja afuera al aplicarse.
+# Se insertan dentro del bloque `elements = {` del set (y no con
+# `add element`) para que `systemctl reload nftables` siga funcionando.
+NFT_TMP="$(mktemp)"
+EXTRA_ADMIN_IPS=""
+if [ -f "$ROOT/.env" ]; then
+    EXTRA_ADMIN_IPS="$(grep -E '^ADMIN_IPS_EXTRA=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
+fi
+ADDED_IPS=""
+VALID_IPS=""
+for _ip in $EXTRA_ADMIN_IPS; do
+    printf '%s' "$_ip" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || continue
+    grep -qE "^[[:space:]]*${_ip//./\\.},?[[:space:]]*$" "$DIR/nftables.conf" && continue  # ya está
+    VALID_IPS="$VALID_IPS $_ip"
+    ADDED_IPS="$ADDED_IPS $_ip"
+done
+if [ -n "$VALID_IPS" ]; then
+    awk -v ips="$VALID_IPS" '
+        { print }
+        /set admin_ips/ { inset = 1 }
+        inset && /elements = \{/ && !done {
+            n = split(ips, a, " ")
+            for (i = 1; i <= n; i++) printf "            %s,\n", a[i]
+            done = 1
+        }
+    ' "$DIR/nftables.conf" > "$NFT_TMP"
+    echo "    + admin extra:$ADDED_IPS"
+else
+    cp "$DIR/nftables.conf" "$NFT_TMP"
+fi
+if sudo nft -c -f "$NFT_TMP" 2>/dev/null; then
     echo "    sintaxis OK"
 else
-    echo "    ERROR: sintaxis inválida en $DIR/nftables.conf"
+    echo "    ERROR: sintaxis inválida en el firewall"
     echo "    No se aplica NADA para no perder conectividad."
+    rm -f "$NFT_TMP"
     exit 1
 fi
 
 echo "==> [2/7] Aplicando firewall ..."
-sudo cp "$DIR/nftables.conf" /etc/nftables.conf
+sudo cp "$NFT_TMP" /etc/nftables.conf
+rm -f "$NFT_TMP"
 # Borra SOLO nuestra tabla (inet filter) para no arrastrar las cadenas
 # internas de Docker. Un "flush ruleset" global rompería el NAT de los
 # contenedores (error "No chain/target/match by that name").
@@ -43,7 +96,26 @@ if [ -f /etc/ssh/sshd_config ]; then
     sudo cp /etc/ssh/sshd_config "$BACKUP"
     echo "    respaldo en $BACKUP"
 fi
-sudo cp "$DIR/sshd_config" /etc/ssh/sshd_config
+# sshd NO arranca si un ListenAddress no existe en ninguna interfaz, y
+# sshd -t no lo detecta (queda el server sin SSH). Se omiten (comentadas)
+# las direcciones que no estén configuradas en esta máquina.
+SSHD_TMP="$(mktemp)"
+trap 'rm -f "$SSHD_TMP"' EXIT
+LOCAL_IPS="$(ip -o -4 addr show | awk '{print $4}' | cut -d/ -f1)"
+while IFS= read -r LINE; do
+    if [[ "$LINE" =~ ^[[:space:]]*ListenAddress[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+        LIP="${BASH_REMATCH[1]}"
+        if printf '%s\n' "$LOCAL_IPS" | grep -Fxq "$LIP"; then
+            printf '%s\n' "$LINE"
+        else
+            printf '# [deploy] omitida: %s no existe en este host\n# %s\n' "$LIP" "$LINE"
+            echo "    AVISO: ListenAddress $LIP omitida (no existe en este host)"
+        fi
+    else
+        printf '%s\n' "$LINE"
+    fi
+done < "$DIR/sshd_config" > "$SSHD_TMP"
+sudo cp "$SSHD_TMP" /etc/ssh/sshd_config
 
 echo "==> [4/7] Verificando y reiniciando ssh ..."
 if sudo sshd -t; then
