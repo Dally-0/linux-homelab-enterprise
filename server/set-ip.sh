@@ -118,13 +118,20 @@ log "==> Estado actual: $IFACE = ${CUR_IP:-sin IP}  →  objetivo: $IP/$PREFIX (
 # ─── [1/6] IP libre ─────────────────────────────────────────────────
 log "==> [1/6] Verificando que $IP esté libre ..."
 if [[ "$CUR_IP" != "$IP/$PREFIX" ]]; then
+    # 1º ARP: una entrada con MAC (lladdr) = otro equipo la está usando,
+    # aunque bloquee ICMP. OJO: FAILED/INCOMPLETE son residuos y NO
+    # cuentan como ocupada (las crea nuestro propio ping de abajo).
+    if ip neigh show "$IP" dev "$IFACE" 2>/dev/null | grep -qE 'lladdr +[0-9a-fA-F:]{17}'; then
+        ip neigh show "$IP" dev "$IFACE" | sed 's/^/    /'
+        die "$IP ya está en uso (hay MAC en la tabla ARP). No se cambia nada."
+    fi
+    # 2º ICMP: por si el otro equipo todavía no está en la tabla ARP
     if ping -c1 -W1 "$IP" >/dev/null 2>&1; then
-        die "$IP ya responde en la red (¿el dc1 físico está encendido?). No se cambia nada."
+        die "$IP ya responde a ping (¿el dc1 físico está encendido?). No se cambia nada."
     fi
-    if ip neigh show "$IP" 2>/dev/null | grep -q .; then
-        die "hay una entrada ARP para $IP. No se cambia nada."
-    fi
-    log "    libre (sin respuesta ICMP/ARP)"
+    # Limpiar el residuo FAILED/INCOMPLETE que dejó nuestro propio ping
+    ip neigh del "$IP" dev "$IFACE" 2>/dev/null || true
+    log "    libre (sin MAC en ARP ni respuesta ICMP)"
 else
     log "    ya está configurada en esta interfaz"
 fi
