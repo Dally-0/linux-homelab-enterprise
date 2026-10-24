@@ -4,11 +4,14 @@
 #
 # GUÍA DE USO
 # -----------
-#   sudo bash server/bootstrap.sh              # instala/provisiona/aplica todo
-#   sudo bash server/bootstrap.sh --check      # solo diagnostica, no cambia nada
-#   sudo bash server/bootstrap.sh --skip-ad    # sin provisionar el AD (ya existe)
-#   sudo bash server/bootstrap.sh --yes        # sin confirmaciones (desatendido)
-#   bash server/bootstrap.sh --help            # esta ayuda
+#   sudo bash install.sh                       # instala/provisiona/aplica todo (incluye IDS/IPS)
+#   sudo bash install.sh --check               # solo diagnostica, no cambia nada
+#   sudo bash install.sh --ips                 # instala y activa modo IPS en línea (bloqueo)
+#   sudo bash install.sh --skip-ids            # sin instalar Suricata (IDS/IPS)
+#   sudo bash install.sh --skip-ad             # sin provisionar el AD (ya existe)
+#   sudo bash install.sh --set-ip              # auto-configura la IP fija 192.168.0.2
+#   sudo bash install.sh --yes                 # sin confirmaciones (desatendido)
+#   bash install.sh --help                     # esta ayuda
 #
 # Es IDEMPOTENTE: detecta lo que ya está hecho y no lo repite. Se puede
 # correr las veces que haga falta (por ejemplo después de un git pull).
