@@ -97,6 +97,7 @@ fill() {
         hex16) new="$(rand 16)" ;;
         hex32) new="$(rand 32)" ;;
         pw)    new="$(randpw 18)" ;;
+        adpw)  new="Adm!$(openssl rand -hex 6)2026" ;;
         mailpw) new="Correo$(openssl rand -hex 4)" ;;
         *)     new="$(rand 32)" ;;
     esac
@@ -104,6 +105,7 @@ fill() {
     GEN_KEYS+=("$key")
 }
 
+fill AD_ADMIN_PASSWORD            adpw
 fill RADIUS_SECRET                hex16
 fill ROUNDCUBE_DES_KEY            hex32
 fill GF_SECRET_KEY                hex32

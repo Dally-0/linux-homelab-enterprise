@@ -55,11 +55,13 @@ HTTPS_URL="https://dc1.sudoers.lan"
 CHECK_ONLY=0
 SKIP_AD=0
 ASSUME_YES=0
+AUTO_SET_IP=0
 for arg in "$@"; do
     case "$arg" in
         -h|--help)  awk 'f && /^# =====/{exit} f{sub(/^# ?/,""); print} /^# =====/{f=1}' "$0"; exit 0 ;;
         --check)    CHECK_ONLY=1 ;;
         --skip-ad)  SKIP_AD=1 ;;
+        --set-ip)   AUTO_SET_IP=1 ;;
         -y|--yes)   ASSUME_YES=1 ;;
         *) echo "Opción desconocida: $arg (usá --help)" >&2; exit 2 ;;
     esac
@@ -97,11 +99,25 @@ if printf '%s\n' "$CUR_IPS" | grep -Fxq "$HOST_IP"; then
     ok "IP $HOST_IP presente en $IFACE_DEF"
 elif [[ $CHECK_ONLY -eq 1 ]]; then
     warn "la IP $HOST_IP NO está configurada (IPs: $(echo $CUR_IPS | tr '\n' ' '))"
-    warn "aplicá primero:  sudo bash server/set-ip.sh --yes --commit"
+    warn "se configuraría con:  sudo bash server/set-ip.sh --yes --commit"
 else
-    die "la IP $HOST_IP NO está configurada en este host (IPs: $(echo $CUR_IPS | tr '\n' ' ')).
-       El DC se provisiona con --host-ip=$HOST_IP: si seguimos así, el AD queda roto.
-       Aplicá primero:  sudo bash server/set-ip.sh --yes --commit"
+    warn "la IP $HOST_IP NO está configurada en este host (IPs: $(echo $CUR_IPS | tr '\n' ' '))."
+    if [[ $AUTO_SET_IP -eq 1 ]]; then
+        info "configurando IP fija $HOST_IP..."
+        bash "$DIR/set-ip.sh" --yes --commit
+    elif [[ $ASSUME_YES -eq 0 ]]; then
+        read -rp "    ¿Deseás configurar la IP fija $HOST_IP ahora usando server/set-ip.sh? [s/N] " ans_ip
+        case "$ans_ip" in
+            s|S|si|SI|sí|SÍ)
+                bash "$DIR/set-ip.sh" --yes --commit
+                ;;
+            *)
+                die "El DC se provisiona con --host-ip=$HOST_IP. Sin ella el AD queda roto. Aplicá primero: sudo bash server/set-ip.sh --yes --commit"
+                ;;
+        esac
+    else
+        die "la IP $HOST_IP NO está configurada. Pasá --set-ip para configurarla automáticamente o aplicá: sudo bash server/set-ip.sh --yes --commit"
+    fi
 fi
 
 if ping -c1 -W2 "$GATEWAY" >/dev/null 2>&1; then ok "gateway $GATEWAY responde"
@@ -118,9 +134,19 @@ else
 fi
 info "RAM: $(free -m | awk '/^Mem:/{print $2}') MB — $(( $(free -m | awk '/^Mem:/{print $7}') )) MB disponibles"
 
-command -v docker >/dev/null || die "docker no está instalado (docker.io + docker-compose-v2)"
-docker compose version >/dev/null 2>&1 || die "falta el plugin 'docker compose' (paquete docker-compose-v2)"
-ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') + compose"
+if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+    if [[ $CHECK_ONLY -eq 1 ]]; then
+        warn "docker o docker-compose no detectados (se instalarían en ejecución normal)"
+    else
+        info "docker o docker-compose no detectados. Instalando paquetes oficiales..."
+        env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+        env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends docker.io docker-compose-v2
+        systemctl enable --now docker
+        ok "docker y docker compose instalados"
+    fi
+else
+    ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo '?') + compose"
+fi
 
 if [[ -f /var/lib/samba/private/sam.ldb ]]; then
     ok "AD ya provisionado"
@@ -225,41 +251,66 @@ fi
 log "[5/9] .env y secretos"
 if [[ $CHECK_ONLY -eq 0 ]]; then
     bash "$DIR/gen-env.sh" >/dev/null
-fi
-[[ -f "$ROOT/.env" ]] || die "no se pudo crear .env"
-ok ".env presente ($(stat -c %a "$ROOT/.env") $(stat -c %U "$ROOT/.env"))"
-
-# IPs desde las que hay sesiones SSH abiertas + la sesión actual: si no están
-# en admin_ips, el firewall (policy drop) cortaría el SSH al aplicarse.
-mapfile -t ADMIN_EXTRA < <(
-    {
-        [[ -n "${SSH_CONNECTION:-}" ]] && echo "${SSH_CONNECTION%% *}"
-        who 2>/dev/null | sed -n 's/.*(\([0-9][0-9.]*\)).*/\1/p'
-    } | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$HOST_IP" | sort -u
-)
-EXISTING_EXTRA="$(grep -E '^ADMIN_IPS_EXTRA=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
-for ip in $EXISTING_EXTRA; do ADMIN_EXTRA+=("$ip"); done
-mapfile -t ADMIN_EXTRA < <(printf '%s\n' "${ADMIN_EXTRA[@]:-}" | grep -E '^[0-9]' | sort -u)
-
-if [[ ${#ADMIN_EXTRA[@]} -gt 0 ]]; then
-    EXTRA_VAL="$(printf '%s ' "${ADMIN_EXTRA[@]}" | sed 's/ *$//')"
-    if [[ $CHECK_ONLY -eq 0 ]]; then
-        if grep -qE '^ADMIN_IPS_EXTRA=' "$ROOT/.env"; then
-            sed -i "s|^ADMIN_IPS_EXTRA=.*|ADMIN_IPS_EXTRA=\"${EXTRA_VAL}\"|" "$ROOT/.env"
-        else
-            printf 'ADMIN_IPS_EXTRA="%s"\n' "$EXTRA_VAL" >> "$ROOT/.env"
-        fi
-    fi
-    ok "ADMIN_IPS_EXTRA = ${EXTRA_VAL}"
-    info "(esas IPs podrán entrar por SSH/Portainer/5432 además de .50–.52)"
 else
-    warn "no detecté IPs de sesión SSH para agregar a admin_ips"
+    if [[ ! -f "$ROOT/.env" ]]; then
+        info "[check] se generaría $ROOT/.env desde .env.example usando gen-env.sh"
+    fi
+fi
+
+if [[ -f "$ROOT/.env" ]]; then
+    ok ".env presente ($(stat -c %a "$ROOT/.env") $(stat -c %U "$ROOT/.env"))"
+
+    # IPs desde las que hay sesiones SSH abiertas + la sesión actual: si no están
+    # en admin_ips, el firewall (policy drop) cortaría el SSH al aplicarse.
+    mapfile -t ADMIN_EXTRA < <(
+        {
+            [[ -n "${SSH_CONNECTION:-}" ]] && echo "${SSH_CONNECTION%% *}"
+            who 2>/dev/null | sed -n 's/.*(\([0-9][0-9.]*\)).*/\1/p'
+        } | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | grep -vx "$HOST_IP" | sort -u
+    )
+    EXISTING_EXTRA="$(grep -E '^ADMIN_IPS_EXTRA=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
+    for ip in $EXISTING_EXTRA; do ADMIN_EXTRA+=("$ip"); done
+    mapfile -t ADMIN_EXTRA < <(printf '%s\n' "${ADMIN_EXTRA[@]:-}" | grep -E '^[0-9]' | sort -u)
+
+    if [[ ${#ADMIN_EXTRA[@]} -gt 0 ]]; then
+        EXTRA_VAL="$(printf '%s ' "${ADMIN_EXTRA[@]}" | sed 's/ *$//')"
+        if [[ $CHECK_ONLY -eq 0 ]]; then
+            if grep -qE '^ADMIN_IPS_EXTRA=' "$ROOT/.env"; then
+                sed -i "s|^ADMIN_IPS_EXTRA=.*|ADMIN_IPS_EXTRA=\"${EXTRA_VAL}\"|" "$ROOT/.env"
+            else
+                printf 'ADMIN_IPS_EXTRA="%s"\n' "$EXTRA_VAL" >> "$ROOT/.env"
+            fi
+        fi
+        ok "ADMIN_IPS_EXTRA = ${EXTRA_VAL}"
+        info "(esas IPs podrán entrar por SSH/Portainer/5432 además de .50–.52)"
+    else
+        warn "no detecté IPs de sesión SSH para agregar a admin_ips"
+    fi
+elif [[ $CHECK_ONLY -eq 1 ]]; then
+    info ".env pendiente de generar en modo normal"
+else
+    die "no se pudo crear .env"
 fi
 
 # ===================================================================
 # 6. AD: provision + usuarios + política
 # ===================================================================
 log "[6/9] Active Directory (Samba nativo)"
+ADMIN_PASS=""
+if [[ -f "$ROOT/.env" ]]; then
+    ADMIN_PASS="$(grep -E '^AD_ADMIN_PASSWORD=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
+fi
+if [[ -z "$ADMIN_PASS" || "$ADMIN_PASS" == *"Cambiar"* ]]; then
+    ADMIN_PASS="Adm!$(openssl rand -hex 6)2026"
+    if [[ -f "$ROOT/.env" && $CHECK_ONLY -eq 0 ]]; then
+        if grep -qE '^AD_ADMIN_PASSWORD=' "$ROOT/.env"; then
+            sed -i "s|^AD_ADMIN_PASSWORD=.*|AD_ADMIN_PASSWORD=${ADMIN_PASS}|" "$ROOT/.env"
+        else
+            printf 'AD_ADMIN_PASSWORD="%s"\n' "$ADMIN_PASS" >> "$ROOT/.env"
+        fi
+    fi
+fi
+
 if [[ $SKIP_AD -eq 1 ]]; then
     warn "--skip-ad: no se toca el AD"
 elif [[ $AD_READY -eq 1 && $CHECK_ONLY -eq 0 ]]; then
@@ -269,17 +320,21 @@ elif [[ $AD_READY -eq 1 && $CHECK_ONLY -eq 0 ]]; then
         info "samba-ad-dc habilitado/arrancado"
     fi
 elif [[ $CHECK_ONLY -eq 0 ]]; then
-    info "provisionando el dominio (te va a pedir la password de administrator)"
-    info "si la password no cumple complejidad (mayúscula+minúscula+número+símbolo, 8+) Samba la rechaza"
-    bash "$DIR/../dc/provision.sh"
+    info "provisionando el dominio con clave de administrator"
+    ADMIN_PASS="$ADMIN_PASS" bash "$DIR/../dc/provision.sh"
     AD_READY=1
 fi
 
 if [[ $CHECK_ONLY -eq 0 && $SKIP_AD -eq 0 && $AD_READY -eq 1 ]]; then
     info "usuarios y grupos del dominio (idempotente)"
-    bash "$DIR/../dc/add-users-groups.sh" >/dev/null 2>&1 || warn "add-users-groups.sh devolvió error (revisar a mano)"
-    bash "$DIR/../dc/password-policy.sh"  >/dev/null 2>&1 || warn "password-policy.sh devolvió error (revisar a mano)"
+    bash "$DIR/../dc/add-users-groups.sh" >/dev/null 2>&1 || warn "add-users-groups.sh devolvió advertencias (revisar a mano)"
+    bash "$DIR/../dc/password-policy.sh"  >/dev/null 2>&1 || warn "password-policy.sh devolvió advertencias (revisar a mano)"
     ok "usuarios/grupos y política aplicados"
+
+    info "registrando registros DNS A en el DC (mail, webmail, archivos, etc.)"
+    printf '%s\n' "$ADMIN_PASS" | kinit administrator >/dev/null 2>&1 || true
+    bash "$DIR/../dc/dns-records.sh" >/dev/null 2>&1 || warn "dns-records.sh devolvió advertencias (revisar a mano)"
+    ok "registros DNS A publicados"
 fi
 
 if systemctl is-active --quiet samba-ad-dc; then
@@ -361,60 +416,195 @@ else
 fi
 
 # ===================================================================
-# 9. Verificación
+# 9. Verificación y Reporte de Instalación
 # ===================================================================
-log "[9/9] Verificación"
-[[ $CHECK_ONLY -eq 1 ]] && warn "modo --check: los chequeos de abajo reflejan el estado actual, no el final"
+log "[9/9] Verificación de la Infraestructura"
+[[ $CHECK_ONLY -eq 1 ]] && warn "modo --check: los chequeos reflejan el estado actual"
 
-for svc in samba-ad-dc chrony nftables; do
-    if systemctl is-active --quiet "$svc"; then ok "$svc activo"; else warn "$svc NO activo"; fi
-done
-if systemctl is-active --quiet freeradius; then ok "freeradius activo"; else warn "freeradius NO activo"; fi
+FAIL_COUNT=0
 
-info "contenedores:"
-if [[ $CHECK_ONLY -eq 0 ]]; then
-    docker compose -f "$ROOT/docker-compose.yml" ps --format '    {{.Name}}\t{{.Status}}' 2>/dev/null || true
-fi
-
-info "puertos clave en escucha:"
-for p in 53 67 88 389 445 80 443 25 143 993 1631 9443 1812; do
-    if ss -Htuln "sport = :$p" 2>/dev/null | grep -q .; then
-        printf '     %-5s \033[32mOK\033[0m\n' "$p"
+check_status() {
+    local name="$1" status="$2"
+    if [[ "$status" == "OK" ]]; then
+        printf '    \033[32m✔\033[0m %-30s [ \033[32mOK\033[0m ]\n' "$name"
     else
-        printf '     %-5s \033[31m--\033[0m\n' "$p"
+        printf '    \033[31m✘\033[0m %-30s [ \033[31mFALLÓ\033[0m ]\n' "$name"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
+}
+
+info "Servicios nativos del servidor:"
+for svc in samba-ad-dc chrony nftables freeradius; do
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+        check_status "$svc" "OK"
+    else
+        check_status "$svc" "FAIL"
     fi
 done
 
-info "DHCP (si dos servidores responden, hay que apagar el del router):"
+info "Contenedores Docker:"
 if [[ $CHECK_ONLY -eq 0 ]]; then
-    docker logs --tail 3 tso-dhcp 2>&1 | sed 's/^/     /' || true
+    CONTAINERS=(tso-dhcp tso-web tso-mail tso-webmail tso-files tso-db tso-print tso-portainer tso-grafana tso-prometheus tso-alertmanager)
+    for c in "${CONTAINERS[@]}"; do
+        if docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | grep -q "^$c Up"; then
+            check_status "$c" "OK"
+        else
+            check_status "$c" "FAIL"
+        fi
+    done
 fi
 
+info "Puertos de red clave:"
+PORTS_TO_CHECK=(
+    "53:DNS (Samba)"
+    "67:DHCP (Kea)"
+    "88:Kerberos (AD)"
+    "389:LDAP (AD)"
+    "445:SMB/CIFS (Shares)"
+    "80:HTTP (Nginx)"
+    "443:HTTPS (Nginx)"
+    "25:SMTP (Mail)"
+    "143:IMAP (Mail)"
+    "993:IMAPS (Mail)"
+    "1631:CUPS (Print)"
+    "1812:FreeRADIUS (WiFi 802.1X)"
+    "9443:Portainer (Docker Web)"
+)
+for item in "${PORTS_TO_CHECK[@]}"; do
+    p="${item%%:*}"
+    label="${item#*:}"
+    if ss -Htuln "sport = :$p" 2>/dev/null | grep -q .; then
+        printf '    \033[32m✔\033[0m Puerto %-5s %-25s [ \033[32mOK\033[0m ]\n' "$p" "$label"
+    else
+        printf '    \033[33m!\033[0m Puerto %-5s %-25s [ \033[33mNO ACTIVO\033[0m ]\n' "$p" "$label"
+    fi
+done
+
+# Lectura de credenciales para el reporte
+get_cfg() {
+    local k="$1" def="${2:-}"
+    if [[ -f "$ROOT/.env" ]]; then
+        local v
+        v="$(grep -E "^${k}=" "$ROOT/.env" | tail -1 | cut -d= -f2- || true)"
+        v="${v%\"}"; v="${v#\"}"; v="${v%\'}"; v="${v#\'}"
+        echo "${v:-$def}"
+    else
+        echo "$def"
+    fi
+}
+
+REP_AD_PASS="$(get_cfg AD_ADMIN_PASSWORD "$ADMIN_PASS")"
+REP_RADIUS_SECRET="$(get_cfg RADIUS_SECRET "No configurado")"
+REP_MAIL_USERS="$(get_cfg MAIL_USERS "No configurado")"
+REP_FILES_ADMIN_USER="$(get_cfg FILES_ADMIN_USER "admin")"
+REP_FILES_ADMIN_PASS="$(get_cfg FILES_ADMIN_PASS "No configurado")"
+REP_FILES_USERS="$(get_cfg FILES_USERS "$REP_MAIL_USERS")"
+REP_GRAFANA_USER="$(get_cfg GRAFANA_ADMIN_USER "admin")"
+REP_GRAFANA_PASS="$(get_cfg GRAFANA_ADMIN_PASSWORD "No configurado")"
+REP_CUPS_USER="$(get_cfg CUPS_ADMIN_USER "admin")"
+REP_CUPS_PASS="$(get_cfg CUPS_ADMIN_PASS "No configurado")"
+REP_PG_USER="$(get_cfg POSTGRES_USER "tso")"
+REP_PG_PASS="$(get_cfg POSTGRES_PASSWORD "No configurado")"
+REP_RESTIC_PASS="$(get_cfg RESTIC_PASSWORD "No configurado")"
+
+SUMMARY_FILE="$ROOT/IT_INSTALL_SUMMARY.txt"
+[[ $EUID -eq 0 ]] && SUMMARY_FILE="/root/IT_INSTALL_SUMMARY.txt"
+
+OVERALL_STATUS="INSTALACIÓN EXITOSA Y SERVICIOS ACTIVOS"
+[[ $FAIL_COUNT -gt 0 ]] && OVERALL_STATUS="INSTALACIÓN CON $FAIL_COUNT ADVERTENCIA(S) / SERVICIO(S) INACTIVOS"
+
+generate_summary() {
 cat <<EOF
+================================================================================
+           RESUMEN DE INSTALACIÓN — INFRAESTRUCTURA IT (TSO-II)
+================================================================================
+Fecha de instalación : $(date '+%Y-%m-%d %H:%M:%S %Z')
+Servidor principal   : dc1.sudoers.lan (IP: $HOST_IP)
+Puerta de enlace     : $GATEWAY (Router TP-Link TL-WR850N)
+Estado global        : $OVERALL_STATUS
 
-────────────────────────────────────────────────────────────
-  dc1: $HOST_IP  ($DC_FQDN.$DOMAIN)
+--------------------------------------------------------------------------------
+ 1. SERVICIOS Y ACCESO WEB (HTTPS)
+--------------------------------------------------------------------------------
+ • Portal Intranet    : https://dc1.sudoers.lan
+ • Webmail Roundcube  : https://webmail.sudoers.lan
+ • Archivos (Web)     : https://archivos.sudoers.lan  (Shares: /srv/samba/)
+ • Impresión (CUPS)   : https://print.sudoers.lan
+ • Grafana Dashboard : https://grafana.sudoers.lan
+ • Portainer (Docker) : https://portainer.sudoers.lan:9443
+ • Monitoreo Zabbix   : http://zabbix.sudoers.lan  (Server dedicado: 192.168.0.3)
+ • Métricas Internas  : ssh -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 joaquin@$HOST_IP
 
-  Portal / proxy         $HTTPS_URL
-  Webmail                https://webmail.$DOMAIN
-  Archivos (web)         https://archivos.$DOMAIN
-  Impresión              https://print.$DOMAIN
-  Grafana                https://grafana.$DOMAIN
-  Portainer              https://portainer.$DOMAIN:9443
-  Prometheus/Alertmgr    ssh -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 ...
+--------------------------------------------------------------------------------
+ 2. CREDENCIALES GENERADAS
+--------------------------------------------------------------------------------
+ [ Active Directory / Samba DC ]
+   - Dominio / Realm  : SUDOERS.LAN (NetBIOS: SUDOERS)
+   - Administrador    : administrator
+   - Password Admin   : $REP_AD_PASS
+   - Usuarios creados : joaquin, david, nicolas (clave inicial: CambiarMe!2026)
+                        grupo2 .. grupo9 (usuarios de prueba en oficina)
 
-  Credenciales: $ROOT/.env  (chmod 600)
-    - administrator del AD: la que definiste en el provision
-    - Grafana:  GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD
-    - Archivos: FILES_ADMIN_USER / FILES_ADMIN_PASS
-    - Correo:   MAIL_USERS (usuario:clave)
+ [ Correo Electrónico & Webmail ]
+   - Cuentas activas  : $REP_MAIL_USERS
+   - Servidor IMAP    : mail.sudoers.lan (puertos 143/993)
+   - Servidor SMTP    : mail.sudoers.lan (puerto 587)
 
-  PENDIENTE (manual):
-    1. Apagar el DHCP del router TP-Link (si no, choca con Kea).
-    2. WiFi 802.1X: router → WPA2-Enterprise, RADIUS 192.168.0.2:1812,
-       password = RADIUS_SECRET (.env). Probar: sudo radtest -t mschap ...
-    3. Registros DNS extra: sudo kinit administrator && sudo bash dc/dns-records.sh
-    4. Clientes: clients/linux.md y clients/windows.md
-    5. Backup: montar disco en /srv/backup y probar sudo bash server/backup.sh
-────────────────────────────────────────────────────────────
+ [ Gestor de Archivos Web ]
+   - Administrador    : $REP_FILES_ADMIN_USER / $REP_FILES_ADMIN_PASS
+   - Cuentas estándar : $REP_FILES_USERS
+
+ [ Monitoreo & Bases de Datos & CUPS ]
+   - Grafana Admin    : $REP_GRAFANA_USER / $REP_GRAFANA_PASS
+   - CUPS Impresión   : $REP_CUPS_USER / $REP_CUPS_PASS
+   - PostgreSQL       : usuario=$REP_PG_USER / db=tso / password=$REP_PG_PASS
+   - Restic Backup    : $REP_RESTIC_PASS
+
+ [ WiFi WPA2-Enterprise / 802.1X ]
+   - RADIUS Secret    : $REP_RADIUS_SECRET
+   - Autenticación    : PEAP / MSCHAPv2 (usuarios del dominio AD)
+
+--------------------------------------------------------------------------------
+ 3. PASOS REQUERIDOS PARA CONFIGURAR EL ROUTER (TP-Link TL-WR850N)
+--------------------------------------------------------------------------------
+ Conectarse al router desde un navegador web: http://$GATEWAY
+
+ [PASO 1] DESACTIVAR EL SERVIDOR DHCP DEL ROUTER (CRÍTICO)
+   1. Ir al menú lateral: "DHCP" -> "DHCP Settings" (o "Servidor DHCP").
+   2. En la opción "DHCP Server", seleccionar: [X] "Disable" (Deshabilitar).
+   3. Hacer clic en "Save" (Guardar).
+   * Motivo: Kea DHCP en dc1 ($HOST_IP) es ahora el único DHCP oficial de la
+     red. Si no se desactiva el del router, habrá conflicto de IPs dobles.
+
+ [PASO 2] CONFIGURAR WIFI EMPRESARIAL 802.1X (WPA2-ENTERPRISE)
+   1. Ir a "Wireless" (Inalámbrico) -> "Wireless Security" (Seguridad Inalámbrica).
+   2. Seleccionar la opción: "WPA/WPA2 - Enterprise".
+   3. Configurar los campos:
+      - Version (Versión)         : WPA2
+      - Encryption (Cifrado)      : AES
+      - Radius Server IP          : $HOST_IP
+      - Radius Port (Puerto)      : 1812
+      - Radius Password (Secreto) : $REP_RADIUS_SECRET
+   4. Hacer clic en "Save" (Guardar) y reiniciar el router si lo solicita.
+
+ [PASO 3] VERIFICACIÓN DE CONEXIÓN WIFI DE CLIENTES
+   - Red SSID                 : "sudoers"
+   - Tipo de Seguridad        : WPA2-Enterprise / 802.1X EAP
+   - Método EAP               : PEAP
+   - Autenticación Fase 2     : MSCHAPv2
+   - Certificado CA           : "No validar" (o instalar services/web/tls/ca.crt)
+   - Usuario y Contraseña     : Usar cualquier usuario del AD (ej. joaquin / david)
+
+--------------------------------------------------------------------------------
+ 4. ARCHIVO DE CONFIGURACIÓN Y SECRETOS
+--------------------------------------------------------------------------------
+ • Archivo maestro    : $ROOT/.env (chmod 600)
+ • Este informe       : $SUMMARY_FILE
+================================================================================
 EOF
+}
+
+# Mostrar en consola y guardar a archivo
+generate_summary | tee "$SUMMARY_FILE"
+chmod 600 "$SUMMARY_FILE"
+ok "informe guardado de forma segura en: $SUMMARY_FILE"

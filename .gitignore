@@ -1,5 +1,7 @@
 # Entorno local (secretos y configuración por máquina)
 .env
+IT_INSTALL_SUMMARY.txt
+.install-summary.txt
 
 # Datos persistentes de los servicios
 data/

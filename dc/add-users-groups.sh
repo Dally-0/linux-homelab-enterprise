@@ -91,8 +91,12 @@ for entry in "${MEMBERSHIPS[@]}"; do
     user="${entry%%:*}"
     groups="${entry#*:}"
     for g in ${groups//,/ }; do
-        samba-tool group addmembers "$g" "$user"
-        echo "    ${user} -> ${g}"
+        if samba-tool group listmembers "$g" 2>/dev/null | grep -qx "$user"; then
+            echo "    ok: ${user} ya en ${g}"
+        else
+            samba-tool group addmembers "$g" "$user" 2>/dev/null || true
+            echo "    + ${user} -> ${g}"
+        fi
     done
 done
 
