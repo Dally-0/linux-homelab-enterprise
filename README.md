@@ -11,15 +11,19 @@ Red: **una sola red `192.168.0.0/24`** — server `192.168.0.2`, gateway router 
 
 **Toda la documentación vive en [`docs/`](docs/README.md).**
 
-- **[`docs/arquitectura.md`](docs/arquitectura.md)** — diseño completo (la leés primero).
-- **[`docs/ids-ips.md`](docs/ids-ips.md)** — diseño y puesta en marcha de IDS / IPS (Suricata / Snort).
+- **[`docs/guia-uso-servicios.md`](docs/guia-uso-servicios.md)** — **Guía completa de uso de todos los servicios (portal, AD, webmail, archivos, print, wifi, zabbix, IDS/IPS).**
+- **[`docs/ids-ips.md`](docs/ids-ips.md)** — diseño, arquitectura y laboratorio de IDS / IPS (Suricata / Snort).
+- **[`docs/publicar-servicios-admin.md`](docs/publicar-servicios-admin.md)** — publicación de subdominios y proxy.
 - **[`AGENTS.md`](AGENTS.md)** — contexto resumido para agentes de IA.
 
 ## Arranque rápido
 
 ```bash
-cp .env.example .env        # completar valores
-docker compose up -d --build
+# Diagnóstico sin cambios
+sudo bash install.sh --check
+
+# Instalación completa unificada (AD, DNS, FreeRADIUS, Docker, Suricata IDS/IPS)
+sudo bash install.sh
 ```
 
 ## Repos relacionados
