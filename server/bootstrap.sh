@@ -18,7 +18,8 @@
 #   1. Preflight: root, IP fija .2, gateway, DNS, disco, RAM, docker.
 #   2. Identidad: hostname dc1, /etc/hosts (sin 127.0.1.1), TZ Buenos Aires.
 #   3. Paquetes base: samba(-ad-dc/-ad-provision), krb5, chrony, dnsutils,
-#      acl/attr, smbclient, freeradius(+utils), restic, openssl, curl.
+#      acl/attr, smbclient, freeradius(+utils), restic, openssl, curl,
+#      suricata(+update), jq.
 #   4. NTP: chrony con server/chrony.conf, systemd-timesyncd deshabilitado.
 #   5. .env: server/gen-env.sh (secretos) + ADMIN_IPS_EXTRA con la IP desde
 #      la que estás conectado (para no perder el SSH al aplicar el firewall).
@@ -27,7 +28,8 @@
 #   7. DNS local: /etc/resolv.conf → 127.0.0.1 (Samba) y verificación.
 #   8. TLS del proxy + server/deploy.sh (firewall, sshd, chrony, RADIUS,
 #      docker compose up -d --build).
-#   9. Verificación: servicios nativos, contenedores, puertos, DNS, NTP.
+#   9. Seguridad de red: IDS / IPS (Suricata con homelab.rules y alternador en caliente).
+#  10. Verificación: servicios nativos, contenedores, puertos, DNS, NTP y reporte final.
 #
 # PENDIENTE DESPUÉS (manual, no lo puede hacer este script)
 # --------------------------------------------------------
@@ -56,11 +58,15 @@ CHECK_ONLY=0
 SKIP_AD=0
 ASSUME_YES=0
 AUTO_SET_IP=0
+ENABLE_IPS=0
+SKIP_IDS=0
 for arg in "$@"; do
     case "$arg" in
         -h|--help)  awk 'f && /^# =====/{exit} f{sub(/^# ?/,""); print} /^# =====/{f=1}' "$0"; exit 0 ;;
         --check)    CHECK_ONLY=1 ;;
         --skip-ad)  SKIP_AD=1 ;;
+        --skip-ids) SKIP_IDS=1 ;;
+        --ips)      ENABLE_IPS=1 ;;
         --set-ip)   AUTO_SET_IP=1 ;;
         -y|--yes)   ASSUME_YES=1 ;;
         *) echo "Opción desconocida: $arg (usá --help)" >&2; exit 2 ;;
@@ -89,7 +95,7 @@ fi
 # ===================================================================
 # 1. Preflight
 # ===================================================================
-log "[1/9] Preflight"
+log "[1/10] Preflight"
 [[ -f "$ROOT/docker-compose.yml" ]] || die "no encuentro $ROOT/docker-compose.yml"
 [[ -f "$ROOT/.env.example" ]]       || die "falta .env.example en $ROOT"
 ok "repo en $ROOT"
@@ -163,7 +169,7 @@ fi
 # ===================================================================
 # 2. Identidad del host
 # ===================================================================
-log "[2/9] Identidad del host"
+log "[2/10] Identidad del host"
 if [[ "$(hostname -s)" != "$DC_FQDN" ]]; then
     run hostnamectl set-hostname "$DC_FQDN"
     info "hostname → $DC_FQDN"
@@ -192,7 +198,7 @@ ok "timezone: $(timedatectl show -p Timezone --value 2>/dev/null || date +%Z)"
 # ===================================================================
 # 3. Paquetes base
 # ===================================================================
-log "[3/9] Paquetes base"
+log "[3/10] Paquetes base"
 PKGS=()
 command -v samba-tool       >/dev/null || PKGS+=(samba samba-ad-dc samba-ad-provision)
 command -v kinit            >/dev/null || PKGS+=(krb5-user krb5-config)
@@ -208,6 +214,11 @@ command -v radclient        >/dev/null || PKGS+=(freeradius-utils)
 command -v nft              >/dev/null || PKGS+=(nftables)
 command -v curl             >/dev/null || PKGS+=(curl)
 command -v openssl          >/dev/null || PKGS+=(openssl)
+if [[ $SKIP_IDS -eq 0 ]]; then
+    command -v suricata        >/dev/null || PKGS+=(suricata)
+    command -v suricata-update >/dev/null || PKGS+=(suricata-update)
+    command -v jq              >/dev/null || PKGS+=(jq)
+fi
 if [[ ${#PKGS[@]} -gt 0 ]]; then
     info "a instalar: ${PKGS[*]}"
     if [[ $CHECK_ONLY -eq 0 ]]; then
@@ -228,7 +239,7 @@ fi
 # ===================================================================
 # 4. NTP (chrony) — Kerberos necesita reloj sincronizado
 # ===================================================================
-log "[4/9] NTP"
+log "[4/10] NTP"
 if [[ $CHECK_ONLY -eq 0 ]]; then
     if systemctl is-enabled systemd-timesyncd >/dev/null 2>&1; then
         systemctl disable --now systemd-timesyncd || true
@@ -248,7 +259,7 @@ fi
 # ===================================================================
 # 5. .env + secretos + IPs de administración
 # ===================================================================
-log "[5/9] .env y secretos"
+log "[5/10] .env y secretos"
 if [[ $CHECK_ONLY -eq 0 ]]; then
     bash "$DIR/gen-env.sh" >/dev/null
 else
@@ -295,7 +306,7 @@ fi
 # ===================================================================
 # 6. AD: provision + usuarios + política
 # ===================================================================
-log "[6/9] Active Directory (Samba nativo)"
+log "[6/10] Active Directory (Samba nativo)"
 ADMIN_PASS=""
 if [[ -f "$ROOT/.env" ]]; then
     ADMIN_PASS="$(grep -E '^AD_ADMIN_PASSWORD=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
@@ -346,7 +357,7 @@ fi
 # ===================================================================
 # 7. DNS local
 # ===================================================================
-log "[7/9] DNS del dominio"
+log "[7/10] DNS del dominio"
 if [[ $CHECK_ONLY -eq 0 && $SKIP_AD -eq 0 ]]; then
     if [[ -f /etc/resolv.conf ]] && ! grep -qE '^nameserver[[:space:]]+127\.0\.0\.1$' /etc/resolv.conf; then
         cp -a /etc/resolv.conf "/etc/resolv.conf.bak.$(date +%Y%m%d%H%M%S)"
@@ -387,7 +398,7 @@ fi
 # ===================================================================
 # 8. TLS + deploy (firewall, sshd, RADIUS, contenedores)
 # ===================================================================
-log "[8/9] TLS del proxy + server/deploy.sh"
+log "[8/10] TLS del proxy + server/deploy.sh"
 if [[ ! -f "$ROOT/services/web/tls/server.crt" ]]; then
     info "generando CA interna + cert wildcard *.sudoers.lan"
     run bash "$ROOT/services/web/tls-gen.sh"
@@ -416,9 +427,32 @@ else
 fi
 
 # ===================================================================
-# 9. Verificación y Reporte de Instalación
+# 9. Seguridad de Red: IDS / IPS (Suricata)
 # ===================================================================
-log "[9/9] Verificación de la Infraestructura"
+log "[9/10] Seguridad de Red: IDS / IPS (Suricata)"
+if [[ $SKIP_IDS -eq 1 ]]; then
+    warn "--skip-ids: se omite la configuración del IDS/IPS"
+elif [[ $CHECK_ONLY -eq 1 ]]; then
+    info "[check] se aprovisionaría Suricata y reglas de seguridad del homelab en $DIR/suricata/setup.sh"
+    if [[ $ENABLE_IPS -eq 1 ]]; then
+        info "[check] se activaría en modo IPS (bloqueo en línea vía NFQUEUE 0 + nftables)"
+    else
+        info "[check] se activaría en modo IDS (detección pasiva en $IFACE_DEF vía AF_PACKET)"
+    fi
+else
+    info "configurando Suricata (IDS/IPS) y reglas de homelab..."
+    bash "$DIR/suricata/setup.sh" -i "$IFACE_DEF"
+    if [[ $ENABLE_IPS -eq 1 ]]; then
+        info "activando modo IPS (bloqueo en línea)..."
+        bash "$DIR/suricata/ips-toggle.sh" --ips
+    fi
+    ok "Suricata configurado y activo"
+fi
+
+# ===================================================================
+# 10. Verificación y Reporte de Instalación
+# ===================================================================
+log "[10/10] Verificación de la Infraestructura"
 [[ $CHECK_ONLY -eq 1 ]] && warn "modo --check: los chequeos reflejan el estado actual"
 
 FAIL_COUNT=0
@@ -441,8 +475,12 @@ for svc in samba-ad-dc chrony nftables freeradius; do
         check_status "$svc" "FAIL"
     fi
 done
-if systemctl is-active --quiet suricata 2>/dev/null; then
-    check_status "suricata (IDS/IPS)" "OK"
+if [[ $SKIP_IDS -eq 0 ]]; then
+    if systemctl is-active --quiet suricata 2>/dev/null; then
+        check_status "suricata (IDS/IPS)" "OK"
+    else
+        check_status "suricata (IDS/IPS)" "FAIL"
+    fi
 fi
 
 info "Contenedores Docker:"
@@ -510,6 +548,17 @@ REP_PG_USER="$(get_cfg POSTGRES_USER "tso")"
 REP_PG_PASS="$(get_cfg POSTGRES_PASSWORD "No configurado")"
 REP_RESTIC_PASS="$(get_cfg RESTIC_PASSWORD "No configurado")"
 
+SURI_MODE_STR="No instalado o inactivo"
+if systemctl is-active --quiet suricata 2>/dev/null; then
+    if [[ -f /etc/default/suricata ]] && grep -qE '^SURICATA_OPTS=.*-q ' /etc/default/suricata; then
+        SURI_MODE_STR="ACTIVO — Modo IPS (Prevención en línea NFQUEUE)"
+    else
+        SURI_MODE_STR="ACTIVO — Modo IDS (Detección pasiva AF_PACKET)"
+    fi
+elif [[ $SKIP_IDS -eq 1 ]]; then
+    SURI_MODE_STR="Omitido (--skip-ids)"
+fi
+
 SUMMARY_FILE="$ROOT/IT_INSTALL_SUMMARY.txt"
 [[ $EUID -eq 0 ]] && SUMMARY_FILE="/root/IT_INSTALL_SUMMARY.txt"
 
@@ -569,10 +618,9 @@ Estado global        : $OVERALL_STATUS
    - Autenticación    : PEAP / MSCHAPv2 (usuarios del dominio AD)
 
  [ Seguridad de Red (IDS / IPS) ]
-   - Motor y Estado   : Suricata 7 (Multi-hilo + Hyperscan)
-   - Modos Operativos : IDS (Detección pasiva) / IPS (Prevención activa en línea)
-   - Herramientas     : sudo bash server/suricata/ips-toggle.sh {--ids|--ips|--status}
-   - Verificación     : sudo bash server/suricata/test-ids-ips.sh
+   - Estado del Motor : $SURI_MODE_STR
+   - Alternar Modo    : sudo bash server/suricata/ips-toggle.sh {--ids|--ips|--status}
+   - Suite de Pruebas : sudo bash server/suricata/test-ids-ips.sh
    - Logs de Eventos  : /var/log/suricata/fast.log & eve.json
 
 --------------------------------------------------------------------------------
