@@ -1,0 +1,140 @@
+%YAML 1.1
+---
+# ===================================================================
+# suricata.yaml — Configuración de IDS / IPS para dc1 (Sudoers Enterprise)
+# ===================================================================
+# Optimizado para la infraestructura IT en red única 192.168.0.0/24
+# Admite tanto modo IDS pasivo (AF_PACKET) como IPS en línea (NFQUEUE)
+# ===================================================================
+
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/24, 127.0.0.0/8]"
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS: "$HOME_NET"
+    DNS_SERVERS: "$HOME_NET"
+    DC_SERVERS: "$HOME_NET"
+
+  port-groups:
+    HTTP_PORTS: "80, 443"
+    SHELLCODE_PORTS: "!80"
+    SSH_PORTS: "22"
+    FILE_DATA_PORTS: "[$HTTP_PORTS, 110, 143, 445]"
+
+default-log-dir: /var/log/suricata/
+
+stats:
+  enabled: yes
+  interval: 30
+
+outputs:
+  # Log tradicional rápido en texto plano
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  # Log enriquecido estructurado EVE (JSON) para análisis, SIEM o Grafana
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes
+            metadata: yes
+            http-body: yes
+            tagged-packets: yes
+        - anomaly:
+            enabled: yes
+            types:
+              decode: yes
+              stream: yes
+              app-layer: yes
+        - http:
+            extended: yes
+        - dns:
+            version: 2
+        - tls:
+            extended: yes
+        - smb:
+            enabled: yes
+        - krb5:
+            enabled: yes
+        - files:
+            force-magic: no
+        # Eventos de descarte en modo IPS (NFQUEUE)
+        - drop:
+            alerts: yes
+            flows: all
+
+# Capa de decodificación y análisis de protocolos
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    dcerpc:
+      enabled: yes
+    smb:
+      enabled: yes
+      detection-ports:
+        dp: "139, 445"
+    krb5:
+      enabled: yes
+      detection-ports:
+        dp: 88
+    dns:
+      tcp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+      udp:
+        enabled: yes
+        detection-ports:
+          dp: 53
+    http:
+      enabled: yes
+      libhtp:
+        default-config:
+          personality: IDS
+          request-body-limit: 100kb
+          response-body-limit: 100kb
+
+# -------------------------------------------------------------------
+# Configuración Modo IDS (Inspección pasiva en interfaz física)
+# -------------------------------------------------------------------
+af-packet:
+  - interface: @SURICATA_IFACE@
+    threads: auto
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmsg: yes
+    buffer-size: 64535
+
+# -------------------------------------------------------------------
+# Configuración Modo IPS (Inspección en línea mediante NFQUEUE y nftables)
+# -------------------------------------------------------------------
+nfq:
+  mode: accept
+  repeat-mark: 1
+  repeat-mask: 1
+  route-queue: 2
+  batchcount: 20
+  fail-open: yes
+
+# Reglas activas
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - homelab.rules
+  - /var/lib/suricata/rules/suricata.rules
+
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config

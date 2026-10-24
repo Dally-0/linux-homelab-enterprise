@@ -12,6 +12,7 @@ Red: **una sola red `192.168.0.0/24`** — server `192.168.0.2`, gateway router 
 **Toda la documentación vive en [`docs/`](docs/README.md).**
 
 - **[`docs/arquitectura.md`](docs/arquitectura.md)** — diseño completo (la leés primero).
+- **[`docs/ids-ips.md`](docs/ids-ips.md)** — diseño y puesta en marcha de IDS / IPS (Suricata / Snort).
 - **[`AGENTS.md`](AGENTS.md)** — contexto resumido para agentes de IA.
 
 ## Arranque rápido

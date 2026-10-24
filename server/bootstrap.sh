@@ -441,6 +441,9 @@ for svc in samba-ad-dc chrony nftables freeradius; do
         check_status "$svc" "FAIL"
     fi
 done
+if systemctl is-active --quiet suricata 2>/dev/null; then
+    check_status "suricata (IDS/IPS)" "OK"
+fi
 
 info "Contenedores Docker:"
 if [[ $CHECK_ONLY -eq 0 ]]; then
@@ -534,6 +537,7 @@ Estado global        : $OVERALL_STATUS
  • Portainer (Docker) : https://portainer.sudoers.lan:9443
  • Monitoreo Zabbix   : http://zabbix.sudoers.lan  (Server dedicado: 192.168.0.3)
  • Métricas Internas  : ssh -L 9090:127.0.0.1:9090 -L 9093:127.0.0.1:9093 joaquin@$HOST_IP
+ • IDS/IPS Suricata   : server/suricata/ (Modo IDS pasivo / IPS NFQUEUE)
 
 --------------------------------------------------------------------------------
  2. CREDENCIALES GENERADAS
@@ -563,6 +567,13 @@ Estado global        : $OVERALL_STATUS
  [ WiFi WPA2-Enterprise / 802.1X ]
    - RADIUS Secret    : $REP_RADIUS_SECRET
    - Autenticación    : PEAP / MSCHAPv2 (usuarios del dominio AD)
+
+ [ Seguridad de Red (IDS / IPS) ]
+   - Motor y Estado   : Suricata 7 (Multi-hilo + Hyperscan)
+   - Modos Operativos : IDS (Detección pasiva) / IPS (Prevención activa en línea)
+   - Herramientas     : sudo bash server/suricata/ips-toggle.sh {--ids|--ips|--status}
+   - Verificación     : sudo bash server/suricata/test-ids-ips.sh
+   - Logs de Eventos  : /var/log/suricata/fast.log & eve.json
 
 --------------------------------------------------------------------------------
  3. PASOS REQUERIDOS PARA CONFIGURAR EL ROUTER (TP-Link TL-WR850N)

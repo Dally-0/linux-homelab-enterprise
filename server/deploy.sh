@@ -297,6 +297,19 @@ sudo chmod 644 /etc/cron.d/tso-radius
 sudo bash "$RAD_SRC/radius-check.sh"
 echo "    sonda RADIUS instalada (/etc/cron.d/tso-radius → radius.prom)"
 
+# --- Suricata IDS/IPS (si está instalado en dc1) ---
+if command -v suricata >/dev/null 2>&1; then
+    echo "==> [Suricata IDS/IPS] Sincronizando reglas de seguridad..."
+    sudo mkdir -p /etc/suricata/rules
+    sudo cp "$DIR/suricata/rules/homelab.rules" /etc/suricata/rules/homelab.rules
+    if systemctl is-active --quiet suricata; then
+        sudo systemctl reload-or-restart suricata 2>/dev/null || true
+        echo "    Suricata activo y reglas sincronizadas (/etc/suricata/rules/homelab.rules)"
+    else
+        echo "    Suricata instalado (inactivo o en configuración manual)"
+    fi
+fi
+
 echo "    Prueba manual de autenticación (en dc1):"
 echo "      sudo radtest -t mschap <usuario> '<clave AD>' 127.0.0.1:1812 0 testing123"
 echo "    Router (UI): Wireless → Security → WPA/WPA2-Enterprise →"

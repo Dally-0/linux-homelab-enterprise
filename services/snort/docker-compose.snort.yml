@@ -1,0 +1,22 @@
+# ===================================================================
+# docker-compose.snort.yml — Despliegue de laboratorio de Snort 3
+# ===================================================================
+# Permite probar Snort 3 de forma aislada en contenedor para la comparativa.
+#
+# Uso:
+#   docker compose -f services/snort/docker-compose.snort.yml up -d
+# ===================================================================
+services:
+  snort3:
+    image: ciscotalos/snort3:latest
+    container_name: tso-snort3
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./snort.lua:/usr/local/etc/snort/snort.lua:ro
+      - ./rules:/usr/local/etc/snort/rules:ro
+      - ./logs:/var/log/snort
+    command: ["snort", "-c", "/usr/local/etc/snort/snort.lua", "-i", "eno1", "-l", "/var/log/snort", "-A", "alert_fast"]
+    restart: unless-stopped

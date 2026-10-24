@@ -92,6 +92,7 @@ máquina Debian** ("laptop siempre encendida", estilo lab). Es la evolución
 | Monitoreo | Zabbix (server + web; agents en hosts) | Server Debian físico `zabbix` (`192.168.0.3`) — `services/zabbix` (compose propio) |
 | Métricas + alertas por mail | Prometheus + Grafana + Alertmanager (Grafana en `grafana.sudoers.lan`) | CONTENEDOR (`services/monitoring`, dc1) |
 | WiFi 802.1X (WPA2-Enterprise) | FreeRADIUS → `ntlm_auth` → AD (usuarios del dominio) | NATIVO (`server/radius/`) |
+| IDS / IPS (Seguridad de red) | Suricata 7 (AF_PACKET pasivo / NFQUEUE en línea) | NATIVO (`server/suricata/`) |
 | Backup | restic (`server/backup.sh` + `restore.sh`, cron) | NATIVO |
 
 ## Estructura del repo
@@ -103,10 +104,10 @@ TSO-II-final/
 ├── .env.example
 ├── README.md            ← índice corto → docs/
 ├── dc/                  ← Samba AD DC nativo (provision.sh, shares.conf, krb5, scripts)
-├── server/              ← host: nftables, sshd, chrony, radius/ (WiFi 802.1X), deploy
+├── server/              ← host: nftables, sshd, chrony, radius/ (WiFi 802.1X), suricata/ (IDS/IPS), deploy
 ├── clients/             ← guías de clientes (wifi.md ✓; linux/windows pendientes)
-├── services/            ← por servicio contenedor (dhcp, web, mail, webmail, db, print, monitoring; apps pendientes)
-└── docs/                ← TODA la documentación (arquitectura, futuro: red, seguridad, backup…)
+├── services/            ← por servicio contenedor (dhcp, web, mail, webmail, db, print, monitoring, snort)
+└── docs/                ← TODA la documentación (ids-ips.md, arquitectura, futuro: red, seguridad, backup…)
 
 Máquinas: dc1 (host físico, 192.168.0.2) + zabbix (server Debian físico dedicado, 192.168.0.3).
 ```
