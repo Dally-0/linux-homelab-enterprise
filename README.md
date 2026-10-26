@@ -13,8 +13,21 @@ Red única plana: **`192.168.0.0/24`** — Servidor `192.168.0.2`, Router/Gatewa
 ## Métodos de Instalación por Scripts
 
 El repositorio soporta **dos modalidades de despliegue**:
-1. **Un solo script maestro automatizado (`install.sh`)**: ideal para desplegar todo de punta a punta sin intervención manual.
-2. **Scripts modulares paso a paso**: ideal si prefieres ejecutar y supervisar cada componente de forma individual (Red $\rightarrow$ Host $\rightarrow$ AD $\rightarrow$ Docker $\rightarrow$ IDS/IPS).
+1. **Opción A (Recomendada): Un solo script maestro ("Todo en Uno")** $\rightarrow$ `install.sh`.
+2. **Opción B: Scripts separados paso a paso** $\rightarrow$ ejecución secuencial de `server/set-ip.sh`, `server/gen-env.sh`, `dc/provision.sh`, etc.
+
+---
+
+### ¿Debo ejecutar algún script ANTES del instalador unificado (`install.sh`)?
+
+> [!IMPORTANT]
+> **Respuesta corta: NO.**  
+> El instalador unificado `install.sh` es **autosuficiente**:
+> * **Si ya configuraste tu IP a mano** en `/etc/network/interfaces`: `install.sh` detecta automáticamente que ya tienes `192.168.0.2` y continúa sin modificarla.
+> * **Si NO configuraste tu IP todavía**: basta con pasarle el flag `--set-ip` (o responder `s` cuando te lo pregunte) y el propio instalador ejecutará `server/set-ip.sh` por ti.
+> * **Variables y contraseñas**: si no existe `.env`, `install.sh` ejecuta internamente `server/gen-env.sh` para crearlo de forma segura.
+
+Por lo tanto, en una máquina recién instalada, **lo único que necesitas antes de `install.sh` es tener `git` y clonar el repo**.
 
 ---
 
@@ -34,41 +47,50 @@ git checkout main
 
 ### Opción A: Instalación Todo en Uno (Script Maestro)
 
-El instalador `install.sh` es **idempotente** (detecta lo que ya existe y no lo duplica).
+El instalador `install.sh` es **idempotente** (detecta lo que ya existe y no lo duplica ni sobrescribe datos útiles).
 
 ```bash
-# 1. Diagnóstico previo (comprueba disco, RAM, red sin realizar cambios)
+# 1. Diagnóstico previo (comprueba disco, RAM, red y dependencias sin tocar nada)
 sudo bash install.sh --check
 
-# 2. Instalación completa desatendida con IP automática y modo IPS en línea:
+# 2. Instalación completa desatendida (auto-configura IP y activa modo IPS en línea):
 sudo bash install.sh --set-ip --ips
 ```
 
 #### Flags disponibles en `install.sh`:
-* `--set-ip`: Configura automáticamente la IP fija `192.168.0.2`, gateway `192.168.0.1` y `/etc/hosts`.
-* `--ips`: Activa el modo IPS activo en línea (bloqueo en tiempo real vía Netfilter `NFQUEUE`).
-* `--skip-ids`: Omite la instalación del IDS/IPS Suricata (solo despliega AD y servicios Docker).
-* `--skip-ad`: Omite la provisión de Active Directory (si el dominio ya fue aprovisionado).
-* `--yes` / `-y`: Modo desatendido sin preguntas de confirmación.
-* `--check`: Solo diagnóstico y validación de prerrequisitos.
+* `--set-ip`: Configura automáticamente la IP fija `192.168.0.2`, gateway `192.168.0.1` y `/etc/hosts` si no estuvieran ya activos.
+* `--ips`: Activa el modo IPS activo en línea (bloqueo y mitigación en tiempo real vía Netfilter `NFQUEUE`).
+* `--skip-ids`: Omite la instalación de Suricata (solo despliega AD nativo y servicios Docker).
+* `--skip-ad`: Omite la provisión de Active Directory (útil si el dominio ya fue aprovisionado previamente).
+* `--yes` / `-y`: Modo desatendido sin preguntas de confirmación interactivas.
+* `--check`: Solo diagnóstico y validación de prerrequisitos del sistema.
 
-Al finalizar, las contraseñas generadas y el resumen quedan guardados en `/root/informe-instalacion-it.txt`.
+Al finalizar, las contraseñas generadas y el informe completo de accesos quedan guardados en:
+```text
+/root/informe-instalacion-it.txt
+```
 
 ---
 
 ### Opción B: Instalación Modular por Scripts Separados
 
-Si prefieres ejecutar cada etapa de manera independiente y controlada, sigue este flujo ordenado:
+Si prefieres supervisar y ejecutar cada etapa de manera independiente y controlada, sigue este flujo cronológico exacto:
 
-#### Paso 1: Configurar IP fija e Identidad de Red
-Configura `192.168.0.2/24`, gateway `192.168.0.1`, hostname `dc1` y `/etc/hosts` con rollback de seguridad:
-```bash
-# Aplica la IP fija permanentemente
-sudo bash server/set-ip.sh --yes --commit
+```text
+[1. server/set-ip.sh]  -->  [2. server/gen-env.sh]  -->  [3. dc/provision.sh + usuarios]
+                                                                     |
+[6. test-ids-ips.sh]   <--  [5. server/suricata/]  <--   [4. server/deploy.sh]
 ```
 
+#### Paso 1: Configurar IP fija e Identidad de Red
+Aplica `192.168.0.2/24`, gateway `192.168.0.1`, hostname `dc1` y `/etc/hosts` (con mecanismo de rollback de seguridad si se pierde la conexión):
+```bash
+sudo bash server/set-ip.sh --yes --commit
+```
+*(Si ya modificaste `/etc/network/interfaces` a mano, solo aplica los cambios con `sudo systemctl restart networking`).*
+
 #### Paso 2: Generar Secretos y Archivo `.env`
-Genera contraseñas aleatorias seguras, certificados TLS con CA interna y vincula tu IP actual al firewall:
+Genera contraseñas aleatorias seguras, certificados TLS con CA interna y vincula tu IP actual al firewall para no perder acceso SSH:
 ```bash
 bash server/gen-env.sh
 ```
@@ -87,7 +109,7 @@ sudo bash dc/password-policy.sh
 ```
 
 #### Paso 4: Desplegar Firewall, Host y Servicios Docker
-Aplica el firewall `nftables`, SSH endurecido, servidor NTP `chrony`, FreeRADIUS y levanta todos los contenedores:
+Aplica el firewall `nftables`, SSH endurecido, servidor NTP `chrony`, FreeRADIUS y levanta todos los contenedores Docker (Kea DHCP en host network, Nginx, Mail, DB, CUPS, Portainer):
 ```bash
 sudo bash server/deploy.sh
 ```
@@ -124,7 +146,7 @@ sudo bash server/suricata/test-ids-ips.sh
 ### Paso Manual Crítico en el Router (TP-Link TL-WR850N)
 
 Una vez que el servidor esté activo, accede a la interfaz web del router en `http://192.168.0.1`:
-1. **Desactivar el DHCP del router:** Ve a **DHCP** $\rightarrow$ **DHCP Settings** $\rightarrow$ Seleccionar **Disable** $\rightarrow$ Guardar.  
+1. **Desactivar el DHCP del router (OBLIGATORIO):** Ve a **DHCP** $\rightarrow$ **DHCP Settings** $\rightarrow$ Seleccionar **Disable** $\rightarrow$ Guardar.  
    *(Kea DHCP en `dc1` es ahora el único encargado de asignar IPs en el rango `192.168.0.100 - .199`).*
 2. **(Opcional) WiFi WPA2-Enterprise:** Ve a **Wireless** $\rightarrow$ **Wireless Security** $\rightarrow$ **WPA/WPA2-Enterprise** $\rightarrow$ IP RADIUS: `192.168.0.2`, Puerto: `1812`, Secreto: consultar en `.env` (`RADIUS_SECRET`).
 
