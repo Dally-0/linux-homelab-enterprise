@@ -169,75 +169,81 @@
 </head>
 <body>
     <header>
-        <span class="brand">intranet<span>.sudoers.lan</span></span>
+        <span class="brand">intranet<span id="brand-suffix">.sudoers.lan</span></span>
         <nav>
             <a href="#servicios">Servicios</a>
+            <a href="#seguridad">Seguridad &amp; Puertos</a>
             <a href="#equipo">Equipo</a>
             <a href="#red">Red</a>
         </nav>
-        <code>dc1 · 192.168.0.2</code>
+        <code id="current-host-tag">dc1 · 192.168.0.2</code>
     </header>
 
     <div class="hero">
-        <h1>Infraestructura IT de la organización<span class="dot">.</span></h1>
+        <h1>Infraestructura IT &amp; Auditoría de Seguridad<span class="dot">.</span></h1>
         <p class="lead">
-            Una sola máquina Debian hace las veces de laboratorio y servidor:
-            dominio Active Directory con <b>Samba 4</b> nativo, y el resto de los
-            servicios en contenedores <b>Docker</b>. 100% Linux, una sola red plana.
+            Servicios empresariales en contenedores <b>Docker</b> y defensas activas con <b>Suricata (IDS/IPS)</b>.
+            Diseño portable y autónomo: auditable mediante <b>OpenVAS / Nmap</b> directamente por IP y puertos.
         </p>
         <div class="badges">
-            <span class="badge">Realm <b>SUDOERS.LAN</b></span>
-            <span class="badge">Red <b>192.168.0.0/24</b></span>
-            <span class="badge">DC <b>dc1.sudoers.lan</b> (192.168.0.2)</span>
-            <span class="badge">Gateway <b>192.168.0.1</b> (TP-Link)</span>
+            <span class="badge">Modo <b>Portable / Direct IP</b></span>
+            <span class="badge">Defensa <b>Suricata IDS/IPS</b></span>
+            <span class="badge">Auditoría <b>OpenVAS / Vuln</b></span>
+            <span class="badge" id="host-badge">Host <b id="host-badge-val">detectando...</b></span>
         </div>
     </div>
 
     <main>
         <section id="servicios">
-            <h2>Servicios</h2>
-            <p class="sub">Los servicios se acceden por nombre; Zabbix se publica directamente en el servidor de monitoreo.</p>
+            <h2>Servicios y Paneles</h2>
+            <p class="sub">Acceso directo por puerto de red o por nombre de dominio si hay DNS disponible.</p>
             <div class="services">
-                <a class="card" href="https://web.sudoers.lan">
-                    <span class="t"><span class="ico">🌐</span> Sitio principal</span>
-                    <span class="desc">Este portal de la intranet, acceso por nombre o IP del servidor.</span>
-                    <span class="url">https://web.sudoers.lan</span>
+                <a class="card" href="http://127.0.0.1:80" data-port="80" data-proto="http:">
+                    <span class="t"><span class="ico">🌐</span> Sitio principal / Portal</span>
+                    <span class="desc">Portal de la organización y punto de entrada web (Nginx).</span>
+                    <span class="url">Puerto 80 (HTTP)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="https://portainer.sudoers.lan">
-                    <span class="t"><span class="ico">🐳</span> Gestión Docker</span>
+                <a class="card" href="https://127.0.0.1:9443" data-port="9443" data-proto="https:">
+                    <span class="t"><span class="ico">🐳</span> Gestión Docker (Portainer)</span>
                     <span class="desc">Panel web para administrar contenedores, imágenes y volúmenes.</span>
-                    <span class="url">https://portainer.sudoers.lan</span>
+                    <span class="url">Puerto 9443 (HTTPS)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="https://print.sudoers.lan">
-                    <span class="t"><span class="ico">🖨️</span> Impresión</span>
-                    <span class="desc">Servidor CUPS e impresora virtual PDF para el dominio.</span>
-                    <span class="url">https://print.sudoers.lan</span>
+                <a class="card" href="http://127.0.0.1:8080" data-port="8080" data-proto="http:">
+                    <span class="t"><span class="ico">✉️</span> Webmail (Roundcube)</span>
+                    <span class="desc">Cliente de correo por navegador para consultar bandejas IMAP.</span>
+                    <span class="url">Puerto 8080 (HTTP)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="https://webmail.sudoers.lan">
-                    <span class="t"><span class="ico">✉️</span> Webmail</span>
-                    <span class="desc">Correo por navegador (Roundcube) para los usuarios del dominio.</span>
-                    <span class="url">https://webmail.sudoers.lan</span>
+                <a class="card" href="http://127.0.0.1:8082" data-port="8082" data-proto="http:">
+                    <span class="t"><span class="ico">📁</span> Archivos (Filebrowser)</span>
+                    <span class="desc">Explorador y gestor web de archivos y carpetas compartidas.</span>
+                    <span class="url">Puerto 8082 (HTTP)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="https://archivos.sudoers.lan">
-                    <span class="t"><span class="ico">📁</span> Archivos</span>
-                    <span class="desc">Gestor web de los recursos compartidos (departamentos y respaldo).</span>
-                    <span class="url">https://archivos.sudoers.lan</span>
+                <a class="card" href="http://127.0.0.1:3000" data-port="3000" data-proto="http:">
+                    <span class="t"><span class="ico">📈</span> Monitoreo — Grafana</span>
+                    <span class="desc">Métricas y tableros en tiempo real de consumo y contenedores.</span>
+                    <span class="url">Puerto 3000 (HTTP)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="http://zabbix.sudoers.lan">
-                    <span class="t"><span class="ico">Z</span> Monitoreo — Zabbix</span>
-                    <span class="desc">Estado de los servidores, servicios y alertas de la organización.</span>
-                    <span class="url">zabbix.sudoers.lan</span>
+                <a class="card" href="http://127.0.0.1:1631" data-port="1631" data-proto="http:">
+                    <span class="t"><span class="ico">🖨️</span> Impresión (CUPS)</span>
+                    <span class="desc">Servidor de colas de impresión y generador virtual de PDFs.</span>
+                    <span class="url">Puerto 1631 (HTTP)</span>
                     <span class="pill done">activo</span>
                 </a>
-                <a class="card" href="https://web.sudoers.lan">
-                    <span class="t"><span class="ico">🗄️</span> Datos &amp; Correo</span>
-                    <span class="desc">PostgreSQL + Postfix/Dovecot: datos y correo interno (cuentas locales; LDAP AD en la Fase 4).</span>
-                    <span class="url">servicios internos</span>
+                <a class="card" href="http://192.168.0.3/" id="card-zabbix">
+                    <span class="t"><span class="ico">🛡️</span> Monitoreo — Zabbix</span>
+                    <span class="desc">Monitoreo de red y agentes (host dedicado o externo).</span>
+                    <span class="url">192.168.0.3 (Puerto 80)</span>
+                    <span class="pill done">activo</span>
+                </a>
+                <a class="card" href="#seguridad">
+                    <span class="t"><span class="ico">🗄️</span> Bases de Datos &amp; Correo</span>
+                    <span class="desc">PostgreSQL (:5432) + Postfix SMTP (:25) + Dovecot IMAP (:143).</span>
+                    <span class="url">Puertos 25, 143, 5432</span>
                     <span class="pill done">activos</span>
                 </a>
             </div>
@@ -268,6 +274,34 @@
             </div>
         </section>
 
+        <section id="seguridad">
+            <h2>Matriz de Puertos &amp; Auditoría de Seguridad</h2>
+            <p class="sub">Servicios expuestos para escaneo de vulnerabilidades (OpenVAS / Nmap) y monitoreados por Suricata IDS/IPS.</p>
+            <div class="box">
+                <table>
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border);">
+                            <td style="color: var(--accent); font-weight: bold;">Puerto</td>
+                            <td style="color: var(--accent); font-weight: bold;">Protocolo / Servicio</td>
+                            <td style="color: var(--accent); font-weight: bold;">Objetivo de Escaneo (OpenVAS)</td>
+                            <td style="color: var(--accent); font-weight: bold;">Detección IDS (Suricata)</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>TCP 22</td><td>OpenSSH Server</td><td>Banners, cifrados débiles, auth brute-force</td><td>Alerta: SSH scan / brute force</td></tr>
+                        <tr><td>TCP 25 / 143</td><td>Postfix (SMTP) / Dovecot (IMAP)</td><td>Open relay, STARTTLS, enumeración VRFY</td><td>Alerta: SMTP probing / IMAP auth anomalies</td></tr>
+                        <tr><td>TCP 80 / 443</td><td>Nginx Web Server</td><td>Cabeceras HTTP, TLS suites, CVEs de proxy</td><td>Alerta: Web vulnerability scan / crawling</td></tr>
+                        <tr><td>TCP 1631</td><td>CUPS Print Server</td><td>Acceso no autenticado a colas de impresión</td><td>Alerta: Non-standard HTTP access</td></tr>
+                        <tr><td>TCP 3000</td><td>Grafana Web UI</td><td>Búsqueda de versiones vulnerables y auth bypass</td><td>Alerta: Scanner user-agents / API probes</td></tr>
+                        <tr><td>TCP 5432</td><td>PostgreSQL Database</td><td>Intentos de autenticación remota y brute force</td><td>Alerta: Database connection probes</td></tr>
+                        <tr><td>TCP 8080</td><td>Roundcube Webmail</td><td>CVEs de plugins, inyección en webmail</td><td>Alerta: Web application attack patterns</td></tr>
+                        <tr><td>TCP 8082</td><td>Filebrowser (Archivos)</td><td>Directory traversal, acceso sin autorización</td><td>Alerta: Path traversal signatures</td></tr>
+                        <tr><td>TCP 9443</td><td>Portainer Docker UI</td><td>Exposición de socket Docker y gestión remota</td><td>Alerta: TLS scan a consola de orquestación</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
         <section id="red">
             <h2>Plan de red</h2>
             <p class="sub">Una sola red plana, sin necesidad de VLANs para el volumen actual.</p>
@@ -281,15 +315,47 @@
                     <tr><td>Equipos fijos</td><td>.50 – .99 (PCs admin .50–.52 y cajas)</td></tr>
                     <tr><td>Pool dinámico</td><td>.100 – .199 (Kea) · DNS 192.168.0.2 · dominio sudoers.lan</td></tr>
                     <tr><td>Tiempo (NTP)</td><td>192.168.0.2 (chrony) — sincroniza la LAN y a los clientes del AD</td></tr>
-                    <tr><td>Estado</td><td><span class="ok">●</span> Identidad (AD), DHCP, DNS, web, correo, impresión y archivos operativos</td></tr>
+                    <tr><td>Estado</td><td><span class="ok">●</span> Modo Portable / Docker autónomo listo para auditoría</td></tr>
                 </table>
             </div>
         </section>
     </main>
 
     <footer>
-        <span>Infraestructura IT · todo Linux · Samba AD DC nativo + servicios Docker</span>
-        <code>sudoers.lan · realm SUDOERS.LAN</code>
+        <span>Infraestructura IT &amp; Lab de Ciberseguridad · Docker + Suricata IDS</span>
+        <code id="footer-host">Host: portable</code>
     </footer>
+
+    <script>
+        // Adaptación automática y dinámica para modo portable / acceso por IP directa
+        (function() {
+            const host = window.location.hostname || '127.0.0.1';
+            const hostTag = document.getElementById('current-host-tag');
+            const hostBadge = document.getElementById('host-badge-val');
+            const footerHost = document.getElementById('footer-host');
+            const brandSuffix = document.getElementById('brand-suffix');
+
+            if (hostBadge) hostBadge.textContent = host;
+            if (hostTag) hostTag.textContent = `IP/Host: ${host}`;
+            if (footerHost) footerHost.textContent = `IP de destino para OpenVAS: ${host}`;
+
+            // Si se accede por IP o localhost (sin dominio DNS configurado)
+            if (host !== 'sudoers.lan' && !host.endsWith('.sudoers.lan')) {
+                if (brandSuffix) brandSuffix.textContent = ` (${host})`;
+
+                // Ajustar cada enlace a la IP y puerto del navegador actual
+                document.querySelectorAll('a[data-port]').forEach(card => {
+                    const port = card.getAttribute('data-port');
+                    const proto = card.getAttribute('data-proto') || 'http:';
+                    const targetUrl = `${proto}//${host}:${port}/`;
+                    card.href = targetUrl;
+                    const urlLabel = card.querySelector('.url');
+                    if (urlLabel) {
+                        urlLabel.textContent = `${host}:${port} (${proto.replace(':', '').toUpperCase()})`;
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

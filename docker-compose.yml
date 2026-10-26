@@ -38,10 +38,12 @@ services:
       DNS_DOMAIN: ${DNS_DOMAIN:-sudoers.lan}
     volumes:
       - dhcp_state:/var/lib/kea
-    # CRÍTICO: Kea da las IPs de toda la red → siempre arriba al boot.
-    # 'always' (no 'unless-stopped') garantiza arranque aunque se detenga
-    # manualmente; si arranca antes que la red, Kea reintenta el socket.
-    restart: always
+    # Profile 'dhcp': no arranca automáticamente con 'docker compose up -d'
+    # para evitar conflicto de IPs si se conecta a una red ajena / WiFi.
+    # Para encenderlo explícitamente: docker compose --profile dhcp up -d
+    profiles:
+      - dhcp
+    restart: unless-stopped
 
   # ------------------------------------------------------------------
   # Web / Proxy inverso (Nginx) — *.sudoers.lan
@@ -90,14 +92,15 @@ services:
   webmail:
     image: roundcube/roundcubemail:${ROUNDCUBE_IMAGE_TAG:-1.7.4-apache}
     container_name: tso-webmail
-    restart: unless-stopped
+    ports:
+      - "${WEBMAIL_PORT:-8080}:80"
     environment:
       ROUNDCUBEMAIL_DEFAULT_HOST: tls://tso-mail
       ROUNDCUBEMAIL_DEFAULT_PORT: "143"
       ROUNDCUBEMAIL_SMTP_SERVER: tls://tso-mail
       ROUNDCUBEMAIL_SMTP_PORT: "587"
       ROUNDCUBEMAIL_USERNAME_DOMAIN: ${DNS_DOMAIN:-sudoers.lan}
-      ROUNDCUBEMAIL_DES_KEY: ${ROUNDCUBE_DES_KEY:?ROUNDCUBE_DES_KEY debe estar definido en .env}
+      ROUNDCUBEMAIL_DES_KEY: ${ROUNDCUBE_DES_KEY:-CambiarEstaClavePorUnaAleatoria123}
     volumes:
       - webmail_db:/var/roundcube/db
       - ./services/webmail/config:/var/roundcube/config:ro
@@ -113,6 +116,8 @@ services:
     image: filebrowser/filebrowser:${FILEBROWSER_TAG:-v2.63.23}
     container_name: tso-files
     restart: unless-stopped
+    ports:
+      - "${FILES_PORT:-8082}:80"
     # root + grupo primario = grupo del share (FILES_GID): los archivos que
     # se crean desde la web quedan root:<share-group> y el equipo puede
     # escribirlos también por SMB (fileMode 0664 / dirMode 0775).
@@ -120,7 +125,7 @@ services:
     entrypoint: ["/bin/tini", "--", "/bin/sh", "/entrypoint.sh"]
     environment:
       FILES_ADMIN_USER: ${FILES_ADMIN_USER:-admin}
-      FILES_ADMIN_PASS: ${FILES_ADMIN_PASS:?FILES_ADMIN_PASS debe estar definido en .env}
+      FILES_ADMIN_PASS: ${FILES_ADMIN_PASS:-admin123456}
       FILES_USERS: ${FILES_USERS:-}
       FILES_MIN_PASS_LEN: ${FILES_MIN_PASS_LEN:-10}
       FILES_FILE_MODE: ${FILES_FILE_MODE:-0664}
@@ -292,14 +297,13 @@ services:
     image: grafana/grafana:${GRAFANA_TAG:-13.0.9}
     container_name: tso-grafana
     restart: unless-stopped
-    # Solo en localhost: el exterior entra por el proxy (grafana.sudoers.lan)
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD debe estar definido en .env}
-      GF_SECRET_KEY: ${GF_SECRET_KEY:?GF_SECRET_KEY debe estar definido en .env}
-      GF_SERVER_ROOT_URL: https://grafana.sudoers.lan
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECRET_KEY: ${GF_SECRET_KEY:-CambiarEstaClavePorUnaAleatoria123}
+      GF_SERVER_ROOT_URL: ${GF_SERVER_ROOT_URL:-%(protocol)s://%(domain)s:%(http_port)s/}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"

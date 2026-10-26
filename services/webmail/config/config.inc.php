@@ -13,8 +13,8 @@
 // es HTTP y no marca la cookie de sesión como Secure.
 $config['proxy_whitelist'] = ['127.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'];
 
-// Solo este nombre puede usarse como Host (evita Host header spoofing).
-$config['trusted_host'] = ['webmail.sudoers.lan'];
+// Permitir acceso por IP directa o dominio (portable)
+$config['trusted_host'] = [];
 
 // El certificado autofirmado de tso-mail no está en la CA del sistema:
 // se valida el TLS pero no la identidad del peer (red interna aislada).
