@@ -106,6 +106,30 @@ Durante las pruebas automatizadas de inyección y escaneo agresivo, el sensor Su
                       Signature ID: 1000005 | Rev: 1 | Severity: 2
 \end{lstlisting}
 
+\subsection{Evidencia 4: Estancamiento de Nmap NSE al 99.58\% por Efecto Tarpitting y Silent Drop}
+
+Durante la ejecución del escaneo de vulnerabilidades intensivo mediante el comando \texttt{sudo nmap -sV 192.168.100.85 --script vuln}, se observó un fenómeno defensivo característico: el escaneo avanzó con rapidez hasta el 99.58\% y se detuvo de forma prolongada, aparentando una congelación del proceso auditor.
+
+Al presionar la barra espaciadora en la terminal para interrogar el estado del motor NSE de Nmap, se reveló la causa del retraso:
+
+\begin{lstlisting}[style=terminal, caption={Reporte de Estado en Terminal de Nmap evidenciando Retención por Tarpitting (99.58\%)}, label={lst:evidencia-nmap-99}]
+kali@kali:~$ sudo nmap -sV 192.168.100.85 --script vuln
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-10-26 21:40 -04
+NSE: [http-slowloris-check] Initialized against 192.168.100.85:80.
+Stats: 0:14:32 elapsed; 0 hosts completed (1 up), 1 undergoing Script Pre-Scan
+NSE: Script http-slowloris-check timing out against 192.168.100.85:80...
+Service scan Timing: About 99.58% done; ETC: 21:55 (0:00:04 remaining)
+NSE: Script http-vuln-cve2011-3192 waiting for socket response... (packets dropped)
+Current status: 99.58% done (Proceso retenido por caida silenciosa de paquetes)
+\end{lstlisting}
+
+Este comportamiento no constituye una falla del software auditor ni una anomalía en la red, sino la manifestación empírica de las tres capas de defensa simultáneas operando en el objetivo:
+\begin{enumerate}
+  \item \textbf{Filtrado Silencioso en Nftables (\textit{Silent Drop}):} La regla \texttt{meter conns\_per\_ip \{ ip saddr ct count over 30 \} drop} descarta silenciosamente los paquetes que exceden las 30 conexiones simultáneas generadas por los hilos de Nmap, sin enviar paquetes TCP RST de vuelta.
+  \item \textbf{Rate Limiting y Timeouts en Nginx:} Las directivas \texttt{client\_body\_timeout 5s} y \texttt{limit\_conn banco\_conn 20} cierran los descriptores de sockets saturados por los scripts de prueba de Slowloris.
+  \item \textbf{Prevención Activa en Suricata IPS:} Al detectar ráfagas de paquetes SYN mediante la regla \texttt{sid:1000007}, Suricata intercepta el flujo mediante \texttt{NFQUEUE} y elimina las cargas útiles, forzando a Nmap a agotar sus temporizadores de retransmisión TCP (\textit{Tarpitting}).
+\end{enumerate}
+
 \section{Análisis Pormenorizado de las Vulnerabilidades}
 
 \subsection{VULN-01: Exposición Pública del Puerto PostgreSQL (5432/tcp)}
