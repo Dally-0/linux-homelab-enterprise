@@ -22,10 +22,22 @@ get_iface() {
     if [[ -f /etc/default/suricata ]]; then
         iface="$(grep -E '^IFACE=' /etc/default/suricata | cut -d= -f2- | tr -d "\"\' ")"
     fi
-    if [[ -z "$iface" ]]; then
+    if [[ -z "$iface" ]] || ! ip link show "$iface" >/dev/null 2>&1; then
+        iface="$(ip -o -4 route get 192.168.0.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')"
+    fi
+    if [[ -z "$iface" ]] || ! ip link show "$iface" >/dev/null 2>&1; then
         iface="$(ip -o -4 route show to default 2>/dev/null | awk '{print $5; exit}')"
     fi
-    echo "${iface:-eno1}"
+    if [[ -z "$iface" ]] || ! ip link show "$iface" >/dev/null 2>&1; then
+        for d in /sys/class/net/*; do
+            [[ -d "$d/device" ]] || continue
+            local name="$(basename "$d")"
+            [[ "$name" =~ ^(lo|docker|veth|br-|virbr) ]] && continue
+            iface="$name"
+            break
+        done
+    fi
+    echo "${iface:-}"
 }
 
 check_root() {
