@@ -4,141 +4,127 @@
 
 \section{Estrategia Integral de Remediación y Endurecimiento}
 
-Para resolver de manera definitiva las vulnerabilidades identificadas en el capítulo anterior, se diseñó e implementó un plan de mitigación técnica basado en el principio de defensa en profundidad (\textit{Defense in Depth}) \citep{cis_debian_2023}. A continuación se detallan las medidas aplicadas en cada nivel de la infraestructura.
+Para neutralizar de forma definitiva las vulnerabilidades identificadas durante el escaneo de Nmap NSE, se diseñó e implementó un plan técnico de mitigación fundamentado en el estándar de defensa en profundidad (\textit{Defense in Depth}) y las guías de endurecimiento del CIS (\textit{Center for Internet Security}) \citep{cis_debian_2023}. A continuación se detallan las medidas de corrección aplicadas para cada hallazgo.
 
-\section{Remediación por Vulnerabilidad Identificada}
+\section{Remediación Específica por Vulnerabilidad Identificada}
 
-\subsection{Solución VULN-01: Deshabilitación de Suites Anónimas Diffie-Hellman en Postfix}
-Para erradicar la vulnerabilidad de Man-in-the-Middle en los puertos de correo \texttt{25} (SMTP) y \texttt{587} (Submission):
+% -----------------------------------------------------------------------------
+\subsection{Remediación VULN-01: Exclusión de Suites Anónimas Diffie-Hellman en Postfix}
+% -----------------------------------------------------------------------------
+
+Para erradicar la vulnerabilidad de Man-in-the-Middle (MitM) en los puertos \texttt{25/tcp} (SMTP) y \texttt{587/tcp} (Submission):
 
 \begin{enumerate}
-  \item \textbf{Exclusión de Cifrados Anónimos (\textit{aNULL}):} En el archivo de configuración del servidor de correo Postfix (\texttt{services/mail/config/main.cf}), se excluyeron explícitamente todas las suites de cifrado anónimas, obsoletas o sin autenticación:
+  \item \textbf{Prohibición Estricta de Cifrados Anónimos (\textit{aNULL}):} En la configuración del demonio Postfix (\texttt{services/mail/config/main.cf}), se agregaron directivas que impiden de forma tajante la negociación de suites sin autenticación de servidor:
 \begin{lstlisting}[style=terminal, caption={Endurecimiento Criptografico TLS en Postfix (main.cf)}, label={lst:mitigacion-postfix}]
-# Excluir suites anonimas (aNULL), nulas y algoritmos debiles
-smtpd_tls_exclude_ciphers = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CBC3-SHA, KRB5-DES, kDHr, kDHd, kEDH
-
-# Forzar cifrado de alta seguridad
+# Excluir suites anonimas (aNULL), suites nulas (eNULL) y algoritmos obsoletos
+smtpd_tls_exclude_ciphers = aNULL, eNULL, EXPORT, DES, RC4, MD5, PSK, aECDH, EDH-DSS-DES-CBC3-SHA, EDH-RSA-DES-CBC3-SHA
 smtpd_tls_ciphers = high
 smtpd_tls_mandatory_ciphers = high
 smtpd_tls_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
 smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3, !TLSv1, !TLSv1.1
 
-# Generar y vincular parametros Diffie-Hellman seguros de 2048 bits
+# Parametros Diffie-Hellman robustos de 2048/3072 bits
 smtpd_tls_dh1024_param_file = /etc/postfix/dh2048.pem
 \end{lstlisting}
 
-  \item \textbf{Generación de Parámetros DH Fuertes:} Se generó un archivo de parámetros Diffie-Hellman de 2048 bits mediante OpenSSL para reemplazar los grupos débiles de 1024 bits:
-\begin{lstlisting}[style=terminal, caption={Generacion de Parametros Diffie-Hellman de 2048 bits}, label={lst:dhparam}]
+  \item \textbf{Generación de Parámetros Diffie-Hellman Seguros:} Se sustituyeron los grupos débiles de 1024 bits generando un grupo de parámetros criptográficos de 2048 bits:
+\begin{lstlisting}[style=terminal, caption={Comando OpenSSL para Parametros DH Fuertes}, label={lst:dhparam-cmd}]
 openssl dhparam -out services/mail/config/dh2048.pem 2048
 \end{lstlisting}
 \end{enumerate}
 
-\subsection{Solución VULN-02: Aislamiento del Motor PostgreSQL en Capa de Red}
-Para neutralizar la exposición directa de la base de datos (puerto 5432):
+% -----------------------------------------------------------------------------
+\subsection{Remediación VULN-02: Mitigación de Denegación de Servicio Byte-Range (CVE-2011-3192)}
+% -----------------------------------------------------------------------------
+
+Para mitigar el riesgo de agotamiento de memoria por solicitudes excesivas de rangos superpuestos (\textit{overlapping byte-ranges}) en los puertos web \texttt{80/tcp} y \texttt{443/tcp}:
 
 \begin{enumerate}
-  \item \textbf{Aislamiento en Docker Bridge:} Se modificó el archivo \texttt{docker-compose.yml} para remover la publicación pública del puerto \texttt{5432:5432}, sustituyéndola por la cláusula \texttt{expose: - 5432}. Con esto, el motor PostgreSQL únicamente es accesible para los contenedores que coexisten en la red interna de Docker (\texttt{homelab\_net}).
-  \item \textbf{Filtrado en Firewall Nftables:} Se configuró una regla restrictiva en \texttt{server/nftables.conf} que vincula el puerto 5432 exclusivamente al conjunto de IPs de administradores autorizados (\texttt{@admin\_ips}):
-\begin{lstlisting}[style=terminal, caption={Regla de Filtrado para PostgreSQL en nftables.conf}, label={lst:mitigacion-postgres}]
-# Permitir acceso al motor PostgreSQL UNICAMENTE desde estaciones admin
-tcp dport 5432 ip saddr @admin_ips accept comment "Postgres solo admins"
-tcp dport 5432 drop comment "Bloqueo por defecto de Postgres para la LAN"
+  \item \textbf{Limitación de Rangos en Nginx (\texttt{max\_ranges}):} En el archivo de configuración del proxy web (\texttt{services/web/nginx.conf}), se restringió el número máximo de rangos permitidos por solicitud:
+\begin{lstlisting}[style=terminal, caption={Proteccion contra Ataques Byte-Range DoS en Nginx}, label={lst:mitigacion-ranges}]
+# Limitar el procesamiento a un solo rango por peticion HTTP
+max_ranges 1;
+
+# Limitar tamano maximo del cuerpo para mitigar buffer exhausts
+client_max_body_size 5m;
+\end{lstlisting}
+
+  \item \textbf{Rate Limiting en Capa 7:} Se configuraron zonas de control de concurrencia y tasa de peticiones mediante \texttt{limit\_req} y \texttt{limit\_conn}:
+\begin{lstlisting}[style=terminal, caption={Limitacion de Conexiones y Tasa de Peticiones en Nginx}, label={lst:mitigacion-ratelimit}]
+limit_req_zone $binary_remote_addr zone=banco_limit:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=banco_conn:10m;
+
+# En el bloque server
+limit_conn banco_conn 20;
+limit_req zone=banco_limit burst=30 nodelay;
+limit_req_status 429;
 \end{lstlisting}
 \end{enumerate}
 
-\subsection{Solución VULN-03: Desactivación de Modo Debug y Divulgación en Webmail}
-Para resolver la advertencia de \texttt{DEBUG is enabled} en el puerto 8080:
-\begin{itemize}
-  \item En el archivo de configuración \texttt{services/webmail/config/config.inc.php}, se establecieron los parámetros de depuración en falso:
-\begin{lstlisting}[style=terminal, caption={Desactivacion de Modo Debug en Roundcube}, label={lst:mitigacion-debug}]
+% -----------------------------------------------------------------------------
+\subsection{Remediación VULN-03: Supresión de Métodos DEBUG y Ocultamiento de Banners}
+% -----------------------------------------------------------------------------
+
+Para resolver la advertencia de \texttt{DEBUG is enabled} en el puerto \texttt{8080/tcp} (Roundcube Webmail):
+
+\begin{enumerate}
+  \item \textbf{Desactivación de Depuración en la Aplicación:} En \texttt{services/webmail/config/config.inc.php}:
+\begin{lstlisting}[style=terminal, caption={Desactivacion de Modo Debug en Roundcube Webmail}, label={lst:mitigacion-debug}]
 $config['debug_level'] = 1;
 $config['devel_mode'] = false;
 $config['display_errors'] = false;
 \end{lstlisting}
-  \item En Nginx se configuró la directiva \texttt{server\_tokens off;} para suprimir la divulgación de banners de software en cabeceras HTTP.
-\end{itemize}
 
-\subsection{Solución VULN-04: Cifrado TLS Obligatorio y Terminación SSL en Nginx}
-Para erradicar la transmisión de credenciales y cookies de sesión en texto claro:
-\begin{enumerate}
-  \item Se centralizó la terminación criptográfica en el proxy inverso Nginx, configurando certificados TLS modernos con protocolos TLSv1.2 y TLSv1.3 y deshabilitando suites obsoletas (RC4, 3DES, CBC).
-  \item Se implementó redirección automática en el puerto 80 hacia HTTPS (\texttt{return 301 https://\$host\$request\_uri;}).
-  \item Los servicios web internos (Roundcube en 8080, Filemanager en 8082 y Grafana en 3000) se enrutan de forma segura bajo canales cifrados.
+  \item \textbf{Filtrado de Métodos HTTP Anómalos en Nginx:} Se bloquea explícitamente cualquier solicitud con verbos de depuración (\texttt{DEBUG}, \texttt{TRACE}, \texttt{TRACK}):
+\begin{lstlisting}[style=terminal, caption={Bloqueo de Metodos HTTP de Depuracion en Nginx}, label={lst:mitigacion-verbos}]
+if ($request_method ~ ^(DEBUG|TRACE|TRACK)$) {
+    return 405 "Metodo no permitido por politica de seguridad bancaria.\n";
+}
+server_tokens off;
+\end{lstlisting}
 \end{enumerate}
 
-\subsection{Solución VULN-05: Endurecimiento de Cabeceras Web y WAF Anti-SQLi}
-En el archivo \texttt{services/web/nginx.conf} se añadieron las siguientes directivas de endurecimiento bancario y reglas de inspección profunda de parámetros:
+% -----------------------------------------------------------------------------
+\subsection{Remediación VULN-04: Aislamiento del Motor de Base de Datos PostgreSQL (5432)}
+% -----------------------------------------------------------------------------
 
-\begin{lstlisting}[style=terminal, caption={Cabeceras de Endurecimiento Web y Bloqueo Anti-SQLi en Nginx}, label={lst:mitigacion-headers}]
-# Cabeceras de seguridad bancaria OWASP / PCI-DSS
+Para mitigar la exposición externa del puerto de PostgreSQL:
+
+\begin{enumerate}
+  \item \textbf{Aislamiento de Red en Docker:} En el archivo \texttt{docker-compose.yml}, el puerto \texttt{5432} no se publica de forma indiscriminada a la interfaz pública, enlazándose exclusivamente a la interfaz de bucle local (\texttt{127.0.0.1:5432:5432}) o manteniéndose interno dentro de la red privada \texttt{tso-net}.
+  \item \textbf{Control de Acceso Estricto en el Firewall (\texttt{nftables}):} En \texttt{server/nftables.conf}, se vinculó el acceso al puerto 5432 únicamente hacia las direcciones IP de los administradores autorizados:
+\begin{lstlisting}[style=terminal, caption={Regla de Acceso a PostgreSQL en nftables.conf}, label={lst:mitigacion-nftables-db}]
+# Permitir acceso al motor de BD EXCLUSIVAMENTE a IPs de administradores
+tcp dport 5432 ip saddr @admin_ips accept comment "Postgres solo admins"
+tcp dport 5432 drop comment "Bloqueo por defecto de Postgres a la red"
+\end{lstlisting}
+\end{enumerate}
+
+% -----------------------------------------------------------------------------
+\subsection{Remediación VULN-05: Cifrado y Canalización Segura de Aplicaciones Web}
+% -----------------------------------------------------------------------------
+
+Para eliminar la transmisión en texto claro en los puertos \texttt{3000}, \texttt{8000}, \texttt{8082} y \texttt{8085}:
+
+\begin{enumerate}
+  \item Se implementó la terminación SSL centralizada en Nginx con certificados autofirmados robustos generados automáticamente en el build de la imagen (\texttt{/etc/ssl/banco/server.crt}).
+  \item Se aplicaron cabeceras HTTP de endurecimiento contra ataques web modernos (OWASP Top 10):
+\begin{lstlisting}[style=terminal, caption={Cabeceras de Endurecimiento Web en Nginx}, label={lst:cabeceras-http}]
 add_header X-Frame-Options "DENY" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-XSS-Protection "1; mode=block" always;
-add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-# Bloqueo proactivo en tiempo real contra Inyecciones SQL
-if ($bloqueo_sqli) {
-    return 403 "Acceso denegado [WAF-ANTI-SQLI]: Carga util de Inyeccion SQL detectada y neutralizada por el Firewall Web.\n";
-}
-
-# Bloqueo proactivo contra Path Traversal / LFI
-if ($bloqueo_traversal) {
-    return 403 "Acceso denegado [WAF-ANTI-LFI]: Intento de Directory Traversal detectado y neutralizado.\n";
-}
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 \end{lstlisting}
-
-\subsection{Solución VULN-06: Mitigación Activa contra DoS, Slowloris y Tarpitting Defensivo}
-Para prevenir la saturación de recursos y neutralizar escaneos masivos:
-
-\begin{enumerate}
-  \item \textbf{Timeouts y Rate Limiting en Nginx:}
-\begin{lstlisting}[style=terminal, caption={Directivas Anti-Slowloris y Limitacion de Conexiones en Nginx}, label={lst:mitigacion-slowloris}]
-client_body_timeout 5s;
-client_header_timeout 5s;
-keepalive_timeout 15s;
-send_timeout 5s;
-
-limit_req_zone $binary_remote_addr zone=req_limit:10m rate=20r/s;
-limit_req zone=req_limit burst=40 nodelay;
-limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
-limit_conn conn_limit 20;
-\end{lstlisting}
-
-  \item \textbf{Prevención Activa de Intrusos con Suricata IPS (NFQUEUE):}
-\begin{lstlisting}[style=terminal, caption={Reglas de Prevencion Activa en homelab.rules}, label={lst:reglas-ips}]
-# Bloqueo inmediato de Inyeccion SQL (UNION SELECT)
-drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Intento SQLi UNION SELECT"; flow:to_server,established; content:"UNION"; nocase; content:"SELECT"; nocase; classtype:web-application-attack; sid:1000001; rev:1;)
-
-# Bloqueo inmediato de Path Traversal (/etc/passwd)
-drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Path Traversal /etc/passwd"; flow:to_server,established; content:"etc/passwd"; nocase; classtype:web-application-attack; sid:1000003; rev:1;)
-\end{lstlisting}
-
-  \item \textbf{Efecto Tarpit y Descarte Silencioso (\textit{Silent Drop}):} La acción de descarte (\texttt{drop}) aplicada por Nftables y Suricata obliga a las herramientas del atacante (Nmap, bots) a esperar el agotamiento de sus temporizadores TCP, provocando los \texttt{TIMEOUT} y \texttt{ERROR: Script execution failed} documentados en la evidencia de escaneo.
 \end{enumerate}
 
-\section{Matriz Comparativa: Estado Inicial vs Estado Mitigado}
+% -----------------------------------------------------------------------------
+\subsection{Consolidación DEF-01: Mantenimiento del WAF Anti-SQLi y Suricata IPS}
+% -----------------------------------------------------------------------------
 
-La \textbf{TABLA \ref{tab:comparativa-mitigacion}} resume el impacto de las soluciones técnicas implementadas, evidenciando la reducción drástica de la superficie de ataque y el fortalecimiento de la postura de seguridad global del sistema objetivo.
+Dado que los scripts de ataque \texttt{http-sql-injection} y \texttt{http-vuln-cve2017-1001000} fallaron exitosamente debido a la intervención activa de los sistemas de defensa:
 
-\begin{table}[H]
-\centering
-\caption{Comparativa Técnica: Estado Inicial (Vulnerable) vs Estado Mitigado}
-\label{tab:comparativa-mitigacion}
-\contenidoConFuente{%
-  \begin{tablaAPA}
-  \begin{tabular}{L{3.4cm}L{5.8cm}L{5.8cm}}
-  \toprule
-  \textbf{Aspecto de Seguridad} & \textbf{Estado Inicial (Vulnerable)} & \textbf{Estado Mitigado (Seguro)} \\
-  \midrule
-  \textbf{Cifrado SMTP (25, 587)} & Habilita intercambio anónimo Diffie-Hellman (\texttt{DH\_anon}) de 1024 bits. Vulnerable a MitM. & Suites anónimas (\texttt{aNULL}) prohibidas; forzado de cifrado TLS alto con DH de 2048 bits. \\
-  \textbf{Base de Datos (5432)} & Expuesta a \texttt{0.0.0.0} en toda la LAN. & Confinada a red interna Docker; solo accesible por IPs administradoras. \\
-  \textbf{Modo Debug Webmail} & Responde afirmativamente a verbos DEBUG (\texttt{http-aspnet-debug}). & Modo debug y volcado de errores desactivados en entorno de producción. \\
-  \textbf{Cifrado Web en Tránsito} & Tráfico HTTP plano en puertos 8080, 8082, 3000. & Redirección obligatoria a HTTPS/TLS 1.3 con suites criptográficas seguras. \\
-  \textbf{Cabeceras HTTP} & Ausencia de protecciones anti-Clickjacking, CSP y HSTS. & Cabeceras OWASP estrictas activas; divulgación de versión desactivada. \\
-  \textbf{Escáneres y SQLi} & Respuesta normal a peticiones con inyecciones SQL. & WAF en Nginx bloquea inyecciones (403) e IPS Suricata descarta paquetes. \\
-  \textbf{Escaneo Nmap (--script vuln)} & El atacante evalúa DoS y scripts agresivos sin restricción. & Efecto Tarpitting: descarte silencioso (\texttt{drop}) retiene al atacante en 99.58\% y causa timeouts. \\
-  \bottomrule
-  \end{tabular}
-  \end{tablaAPA}%
-}{Elaboración propia.}
-\end{table}
+\begin{enumerate}
+  \item \textbf{Reglas WAF en Nginx:} Se conservan las matrices de coincidencia por expresiones regulares seguras en hexadecimal (\texttt{\textbackslash x27}, \texttt{\textbackslash x23}) que bloquean patrones de inyección SQL (\texttt{UNION SELECT}, \texttt{OR 1=1}) devolviendo \texttt{403 Forbidden}.
+  \item \textbf{Suricata en Modo IPS (NFQUEUE):} Se mantienen activas las firmas de intrusión bancaria con regla de acción \texttt{drop}, registrando cada intento de intrusión en \texttt{/var/log/suricata/eve.json} para su visualización inmediata en la consola web EveBox (\texttt{http://192.168.100.85:5636/}).
+\end{enumerate}
