@@ -1,0 +1,974 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Suite de Firma Digital PAdES — UPDS</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/_astro/index.pmhf8lPN.css"></head><body><div class="app-container"><header class="app-header"><div class="brand"><div class="brand-icon">🛡️</div><div class="brand-text"><h1>UPDS · Firma Digital</h1><p>Plataforma Institucional de Certificación y Firma Electrónica Avanzada PAdES</p></div></div><div class="header-badges"><div id="user-header-pill" class="user-header-pill"></div><div class="status-pill" id="backend-status-pill"><span class="status-dot" id="backend-dot"></span><span id="backend-status-text">Conectando...</span></div></div></header><main class="main-card"><div id="auth-loading-state" class="auth-loading-state" data-astro-cid-lcdefpme><div class="loading-icon-pulse" data-astro-cid-lcdefpme>🛡️</div><div class="loading-text" data-astro-cid-lcdefpme>Verificando credenciales de acceso...</div><div class="loading-subtext" data-astro-cid-lcdefpme>Seguridad de la Información · UPDS</div></div><div id="auth-gate-wall" style="display:none;" data-astro-cid-lcdefpme><div class="auth-gate-card" data-astro-cid-lcdefpme><div class="auth-gate-hero" data-astro-cid-lcdefpme><span class="auth-gate-badge" data-astro-cid-lcdefpme>🔒 ACCESO RESTRINGIDO POR MIDDLEWARE</span><h2 data-astro-cid-lcdefpme>Plataforma de Firma Digital Institucional</h2><p data-astro-cid-lcdefpme>Por políticas de ciberseguridad y no repudio (Ley 164),<strong data-astro-cid-lcdefpme>debes iniciar sesión o registrarte</strong> para emitir tu certificado digital X.509, firmar documentos PDF y auditar firmas electrónicas avanzadas.</p></div><!-- SELECTOR DE PESTAÑA: LOGIN / REGISTRO --><div class="auth-switch-bar" data-astro-cid-lcdefpme><button type="button" class="auth-switch-btn active" id="gate-btn-login" onclick="switchGateTab('login')" data-astro-cid-lcdefpme>🔑 Iniciar Sesión</button><button type="button" class="auth-switch-btn" id="gate-btn-register" onclick="switchGateTab('register')" data-astro-cid-lcdefpme>✨ Crear Cuenta & Emitir Certificado</button></div><!-- FORMULARIO DE INICIO DE SESIÓN --><div id="gate-panel-login" class="gate-panel active" data-astro-cid-lcdefpme><form onsubmit="handleGateLogin(event)" class="gate-form" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Correo Institucional / Personal <span class="req" data-astro-cid-lcdefpme>*</span></label><input type="email" id="gate-login-email" required placeholder="ejemplo@upds.edu.bo" class="form-control" autocomplete="email" data-astro-cid-lcdefpme></div><div class="form-group" style="margin-top:14px;" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Contraseña <span class="req" data-astro-cid-lcdefpme>*</span></label><input type="password" id="gate-login-password" required placeholder="Tu contraseña" class="form-control" autocomplete="current-password" data-astro-cid-lcdefpme></div><button type="submit" class="btn-primary-action" id="btn-gate-login" style="margin-top:20px;" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>🚀</span><span class="btn-label" data-astro-cid-lcdefpme>Ingresar a la Plataforma</span></button></form></div><!-- FORMULARIO DE REGISTRO --><div id="gate-panel-register" class="gate-panel" style="display:none;" data-astro-cid-lcdefpme><div class="pki-mini-banner" data-astro-cid-lcdefpme><span class="pki-mini-icon" data-astro-cid-lcdefpme>🏛️</span><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Emisión Criptográfica Institucional:</strong>Al registrarte, la Autoridad Certificadora (CA Raíz UPDS) generará tu par de claves RSA 2048 y emitirá tu Certificado X.509 v3 oficial.</div></div><form onsubmit="handleGateRegister(event)" class="gate-form" data-astro-cid-lcdefpme><div class="form-grid-2" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Nombre Completo <span class="req" data-astro-cid-lcdefpme>*</span></label><input type="text" id="gate-reg-name" required placeholder="Ej. Juan Pérez" class="form-control" autocomplete="name" data-astro-cid-lcdefpme><span class="form-tip" data-astro-cid-lcdefpme>Nombre que constará en tu firma digital.</span></div><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Correo Electrónico <span class="req" data-astro-cid-lcdefpme>*</span></label><input type="email" id="gate-reg-email" required placeholder="juan.perez@upds.edu.bo" class="form-control" autocomplete="email" data-astro-cid-lcdefpme></div></div><div class="form-grid-2" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Contraseña <span class="req" data-astro-cid-lcdefpme>*</span></label><input type="password" id="gate-reg-password" required minlength="6" placeholder="Mínimo 6 caracteres" class="form-control" autocomplete="new-password" data-astro-cid-lcdefpme></div><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Facultad / Unidad</label><input type="text" id="gate-reg-unit" value="Seguridad Informatica" class="form-control" data-astro-cid-lcdefpme></div></div><div class="form-grid-2" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Sede / Ciudad</label><input type="text" id="gate-reg-city" value="La Paz" class="form-control" data-astro-cid-lcdefpme></div><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Organización Emisora</label><input type="text" id="gate-reg-org" value="Universidad Privada Domingo Savio" class="form-control" readonly data-astro-cid-lcdefpme></div></div><button type="submit" class="btn-primary-action" id="btn-gate-register" style="margin-top:20px;" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>⚡</span><span class="btn-label" data-astro-cid-lcdefpme>Crear Cuenta & Emitir Certificado X.509</span></button></form></div></div></div><div id="authenticated-suite" style="display:none;" data-astro-cid-lcdefpme><!-- NAVEGACIÓN PRINCIPAL: 3 VISTAS CLARAS Y ORDENADAS --><nav class="main-nav-tabs" data-astro-cid-lcdefpme><button class="nav-btn active" data-tab="sign" data-astro-cid-lcdefpme><span class="nav-icon" data-astro-cid-lcdefpme>✍️</span><span class="nav-text" data-astro-cid-lcdefpme>Firmar Documento</span></button><button class="nav-btn" data-tab="verify" data-astro-cid-lcdefpme><span class="nav-icon" data-astro-cid-lcdefpme>🔍</span><span class="nav-text" data-astro-cid-lcdefpme>Validar Firma</span></button><button class="nav-btn" data-tab="account" data-astro-cid-lcdefpme><span class="nav-icon" data-astro-cid-lcdefpme>👤</span><span class="nav-text" data-astro-cid-lcdefpme>Mi Certificado & Historial</span></button></nav><!-- ===================================================================== --><!-- VISTA 1: FIRMAR DOCUMENTO                                             --><!-- ===================================================================== --><section id="tab-sign" class="tab-pane active" data-astro-cid-lcdefpme><!-- BARRA DE IDENTIDAD ACTIVA DEL FIRMANTE --><div class="identity-card-active" data-astro-cid-lcdefpme><div class="id-card-left" data-astro-cid-lcdefpme><div class="id-card-icon" data-astro-cid-lcdefpme>🔐</div><div data-astro-cid-lcdefpme><div class="id-card-title" data-astro-cid-lcdefpme><span data-astro-cid-lcdefpme>Firmando como:</span><strong id="active-signer-name" data-astro-cid-lcdefpme>Cargando identidad...</strong><span class="badge-tag badge-success" data-astro-cid-lcdefpme>CA Raíz UPDS</span></div><div class="id-card-desc" id="active-signer-desc" data-astro-cid-lcdefpme>Certificado X.509 v3 activo · Clave privada custodiada de forma segura</div></div></div><button type="button" class="btn-subtle" onclick="goToTab('account')" title="Ver detalles de mi certificado" data-astro-cid-lcdefpme>Ver Credencial</button></div><!-- PASO 1: SELECCIONAR ARCHIVO PDF --><div class="section-box" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>1</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Documento PDF a Firmar</h3><p class="section-desc" data-astro-cid-lcdefpme>Arrastra o selecciona el archivo PDF que deseas certificar digitalmente.</p></div></div><div class="drop-zone" id="pdf-drop-zone" data-astro-cid-lcdefpme><input type="file" id="sign-pdf" accept="application/pdf" class="file-input-hidden" onchange="handlePdfSelect(event)" data-astro-cid-lcdefpme><div class="drop-content" id="pdf-drop-idle" data-astro-cid-lcdefpme><div class="drop-icon" data-astro-cid-lcdefpme>📄</div><div class="drop-text" data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Haz clic para examinar</strong> o arrastra tu archivo PDF aquí</div><div class="drop-hint" data-astro-cid-lcdefpme>Formato aceptado: .pdf (PAdES / ISO 32000-2)</div></div><div class="drop-file-selected" id="pdf-selected-info" style="display:none;" data-astro-cid-lcdefpme><div class="file-icon-pdf" data-astro-cid-lcdefpme>PDF</div><div class="file-meta" data-astro-cid-lcdefpme><div class="file-name" id="selected-pdf-name" data-astro-cid-lcdefpme>documento.pdf</div><div class="file-size" id="selected-pdf-size" data-astro-cid-lcdefpme>0 KB</div></div><button type="button" class="btn-remove-file" onclick="clearSelectedPdf(event)" data-astro-cid-lcdefpme>✕ Quitar</button></div></div></div><!-- PASO 2: CREDENCIAL Y CERTIFICADO DIGITAL --><div class="section-box" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>2</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Certificado Digital y Clave Privada</h3><p class="section-desc" data-astro-cid-lcdefpme>Elige entre tu certificado institucional en la nube o carga un archivo portable .p12 / .pfx.</p></div></div><!-- SELECTOR DE ORIGEN DE CERTIFICADO --><div class="format-choice-grid" data-astro-cid-lcdefpme><label class="format-option" data-astro-cid-lcdefpme><input type="radio" name="cert_source" value="account" checked onchange="toggleCertSource('account')" data-astro-cid-lcdefpme><div class="format-card" data-astro-cid-lcdefpme><span class="format-icon" data-astro-cid-lcdefpme>🏛️</span><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Mi Certificado Institucional UPDS (Nube)</strong><p data-astro-cid-lcdefpme>Usa la clave y certificado X.509 emitidos por la CA Raíz UPDS para tu cuenta (Cloud Sign en 1 clic).</p></div></div></label><label class="format-option" data-astro-cid-lcdefpme><input type="radio" name="cert_source" value="p12" onchange="toggleCertSource('p12')" data-astro-cid-lcdefpme><div class="format-card" data-astro-cid-lcdefpme><span class="format-icon" data-astro-cid-lcdefpme>📦</span><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Cargar Contenedor PKCS#12 (.p12 / .pfx)</strong><p data-astro-cid-lcdefpme>Selecciona tu archivo de certificado digital portable con clave privada e ingresa su contraseña.</p></div></div></label></div><!-- PANEL DE CARGA DE ARCHIVO .P12 (DESPLEGABLE) --><div id="p12-config-box" style="display:none;margin-top:16px;" data-astro-cid-lcdefpme><div class="p12-upload-container" data-astro-cid-lcdefpme><div class="drop-zone" id="p12-drop-zone" style="padding:22px 16px;" data-astro-cid-lcdefpme><input type="file" id="sign-p12" accept=".p12,.pfx,application/x-pkcs12" class="file-input-hidden" onchange="handleP12Select(event)" data-astro-cid-lcdefpme><div class="drop-content" id="p12-drop-idle" data-astro-cid-lcdefpme><div class="drop-icon" style="font-size:30px;" data-astro-cid-lcdefpme>📦</div><div class="drop-text" style="font-size:13px;" data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Haz clic para examinar</strong> o arrastra tu archivo <code data-astro-cid-lcdefpme>.p12</code> o <code data-astro-cid-lcdefpme>.pfx</code> aquí</div><div class="drop-hint" data-astro-cid-lcdefpme>Contenedor binario estándar PKCS#12 con clave privada (ej. mi_certificado.p12)</div></div><div class="drop-file-selected" id="p12-selected-info" style="display:none;" data-astro-cid-lcdefpme><div class="file-icon-p12" data-astro-cid-lcdefpme>P12</div><div class="file-meta" data-astro-cid-lcdefpme><div class="file-name" id="selected-p12-name" data-astro-cid-lcdefpme>mi_certificado.p12</div><div class="file-size" id="selected-p12-size" data-astro-cid-lcdefpme>0 KB</div></div><button type="button" class="btn-remove-file" onclick="clearSelectedP12(event)" data-astro-cid-lcdefpme>✕ Quitar</button></div></div><div class="form-grid-2" style="margin-top:14px;align-items:flex-end;" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Contraseña del Contenedor .p12</label><div style="position:relative;display:flex;align-items:center;" data-astro-cid-lcdefpme><input type="password" id="sign-p12-password" placeholder="Contraseña de protección" class="form-control" style="padding-right:40px;" data-astro-cid-lcdefpme><button type="button" class="btn-toggle-eye" onclick="toggleP12Eye()" title="Mostrar/ocultar contraseña" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:16px;" data-astro-cid-lcdefpme>👁️</button></div><span class="form-tip" data-astro-cid-lcdefpme>Si descargaste tu .p12 de esta plataforma, la contraseña es la de tu cuenta o UPDS2026. Para el laboratorio local suele ser <code data-astro-cid-lcdefpme>ClaveFirma2026</code>.</span></div><div class="form-group" data-astro-cid-lcdefpme><button type="button" class="btn-secondary-action" id="btn-inspect-p12" onclick="inspectP12Details()" style="width:100%;height:42px;" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>🔍</span><span class="btn-label" data-astro-cid-lcdefpme>Inspeccionar Certificado</span></button></div></div><!-- RESULTADO DE INSPECCIÓN DEL .P12 --><div id="p12-inspect-badge" style="display:none;margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-md);padding:12px 16px;" data-astro-cid-lcdefpme><div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#166534;font-size:13px;margin-bottom:6px;" data-astro-cid-lcdefpme><span data-astro-cid-lcdefpme>✅ Certificado Válido y Listo para Firmar</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:12px;color:#1e293b;" data-astro-cid-lcdefpme><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Titular:</strong> <span id="p12-inspect-cn" data-astro-cid-lcdefpme>-</span></div><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Organización:</strong> <span id="p12-inspect-org" data-astro-cid-lcdefpme>-</span></div><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Emisor:</strong> <span id="p12-inspect-issuer" data-astro-cid-lcdefpme>-</span></div><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Válido hasta:</strong> <span id="p12-inspect-valid" data-astro-cid-lcdefpme>-</span></div></div></div></div></div></div><!-- PASO 3: FORMATO Y OPCIONES DE LA FIRMA --><div class="section-box" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>3</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Configuración de la Firma PAdES</h3><p class="section-desc" data-astro-cid-lcdefpme>Define el formato de la firma y el motivo del acto.</p></div></div><!-- TOGGLE FIRMA INVISIBLE VS VISIBLE --><div class="format-choice-grid" data-astro-cid-lcdefpme><label class="format-option" data-astro-cid-lcdefpme><input type="radio" name="sig_visibility" value="invisible" checked onchange="toggleSignatureFormat('invisible')" data-astro-cid-lcdefpme><div class="format-card" data-astro-cid-lcdefpme><span class="format-icon" data-astro-cid-lcdefpme>🔏</span><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Firma Criptográfica Invisible (Recomendada)</strong><p data-astro-cid-lcdefpme>Incrusta la firma digital directamente en la estructura interna del PDF sin alterar el diseño visual.</p></div></div></label><label class="format-option" data-astro-cid-lcdefpme><input type="radio" name="sig_visibility" value="visible" onchange="toggleSignatureFormat('visible')" data-astro-cid-lcdefpme><div class="format-card" data-astro-cid-lcdefpme><span class="format-icon" data-astro-cid-lcdefpme>🖋️</span><div data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Firma Visible con Estampa & Rúbrica</strong><p data-astro-cid-lcdefpme>Estampa un sello visual con tu nombre, fecha, sello de la UPDS y tu rúbrica manuscrita sobre la hoja.</p></div></div></label></div><!-- SECCIÓN DE FIRMA VISIBLE (CONDICIONAL) --><div id="visual-config-box" style="display:none;margin-top:16px;" data-astro-cid-lcdefpme><div class="form-grid-2" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Posición en la hoja</label><select id="sign-pos" class="form-control" onchange="updatePreviewStamp()" data-astro-cid-lcdefpme><option value="bottom-right" selected data-astro-cid-lcdefpme>Inferior Derecha (Predeterminado)</option><option value="bottom-left" data-astro-cid-lcdefpme>Inferior Izquierda</option><option value="top-right" data-astro-cid-lcdefpme>Superior Derecha</option><option value="top-left" data-astro-cid-lcdefpme>Superior Izquierda</option></select></div><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Página a estampar</label><select id="sign-page" class="form-control" data-astro-cid-lcdefpme><option value="0" selected data-astro-cid-lcdefpme>Primera página (Pág. 1)</option><option value="-1" data-astro-cid-lcdefpme>Última página</option></select></div></div><!-- LIENZO INTERACTIVO DE RÚBRICA MANUSCRITA --><div class="canvas-box" data-astro-cid-lcdefpme><div class="canvas-header" data-astro-cid-lcdefpme><label class="input-label" style="margin:0;" data-astro-cid-lcdefpme>Dibuja tu firma o rúbrica:</label><button type="button" class="btn-link" onclick="clearSignatureCanvas()" data-astro-cid-lcdefpme>Borrar trazo</button></div><div class="canvas-wrapper" data-astro-cid-lcdefpme><canvas id="sig-canvas" width="460" height="120" data-astro-cid-lcdefpme></canvas><div class="canvas-watermark" id="canvas-watermark" data-astro-cid-lcdefpme>Dibuja aquí con el mouse o dedo</div></div><div class="canvas-footer" data-astro-cid-lcdefpme><span class="canvas-tip" data-astro-cid-lcdefpme>Opcional: Sube una imagen de tu firma (.png transparente):</span><input type="file" id="sig-img-upload" accept="image/png,image/jpeg" style="font-size:12px;" onchange="handleSigImgUpload(event)" data-astro-cid-lcdefpme></div></div><!-- PREVIEW DE LA ESTAMPA --><div class="stamp-preview-container" data-astro-cid-lcdefpme><div class="stamp-preview-title" data-astro-cid-lcdefpme>Previsualización de la estampa en el PDF:</div><div class="stamp-card" data-astro-cid-lcdefpme><div class="stamp-seal" data-astro-cid-lcdefpme>UNIVERSIDAD PRIVADA DOMINGO SAVIO · FIRMA DIGITAL</div><div class="stamp-signer" id="preview-signer" data-astro-cid-lcdefpme>Firmante: ...</div><div class="stamp-reason" id="preview-reason" data-astro-cid-lcdefpme>Motivo: Conformidad técnica</div><div class="stamp-date" id="preview-date" data-astro-cid-lcdefpme>Fecha: ...</div><div class="stamp-hash" data-astro-cid-lcdefpme>Validador: ISO 32000-2 · PAdES CMS</div></div></div></div><!-- METADATOS BÁSICOS --><div class="form-grid-2" style="margin-top:16px;" data-astro-cid-lcdefpme><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Motivo de la Firma</label><input type="text" id="sign-reason" value="Firma de conformidad técnica (UPDS)" class="form-control" data-astro-cid-lcdefpme><div class="quick-tags" data-astro-cid-lcdefpme><button type="button" class="tag-btn" onclick="setReason('Aprobación de informe académico')" data-astro-cid-lcdefpme>Aprobación académica</button><button type="button" class="tag-btn" onclick="setReason('Firma de conformidad técnica')" data-astro-cid-lcdefpme>Conformidad técnica</button><button type="button" class="tag-btn" onclick="setReason('Revisión de seguridad de la información')" data-astro-cid-lcdefpme>Revisión de seguridad</button></div></div><div class="form-group" data-astro-cid-lcdefpme><label class="input-label" data-astro-cid-lcdefpme>Lugar / Ciudad</label><input type="text" id="sign-loc" value="La Paz, Bolivia" class="form-control" data-astro-cid-lcdefpme></div></div></div><!-- BOTÓN DE FIRMA --><div class="action-bar" data-astro-cid-lcdefpme><button type="button" class="btn-primary-action" id="btn-submit-sign" onclick="executeSignPdf()" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>✍️</span><span class="btn-label" data-astro-cid-lcdefpme>Firmar Documento con PAdES</span></button></div><!-- TARJETA DE RESULTADO DE FIRMA --><div id="sign-result-card" class="result-card" style="display:none;" data-astro-cid-lcdefpme><div class="result-header" data-astro-cid-lcdefpme><span class="result-icon-badge" data-astro-cid-lcdefpme>✅</span><div data-astro-cid-lcdefpme><h4 style="margin:0;color:#065f46;font-size:16px;" data-astro-cid-lcdefpme>¡Documento Firmado Exitosamente!</h4><p id="sign-result-text" style="font-size:13px;color:#047857;margin:4px 0 0;" data-astro-cid-lcdefpme>...</p></div></div><div class="result-actions" style="display:flex;gap:10px;flex-wrap:wrap;" data-astro-cid-lcdefpme><button type="button" class="btn-subtle" id="btn-download-signed-pdf" data-astro-cid-lcdefpme>⬇️ Descargar nuevamente</button><button type="button" class="btn-primary-action" style="width:auto;padding:8px 16px;font-size:13px;" onclick="goToAuditWithSignedPdf()" data-astro-cid-lcdefpme>🔍 Auditar Localmente</button><button type="button" class="btn-primary-action" style="width:auto;padding:8px 16px;font-size:13px;background:linear-gradient(135deg, #047857 0%, #065f46 100%);border:none;color:white;" onclick="goToValidateBoliviaWithSignedPdf()" data-astro-cid-lcdefpme>🇧🇴 Validar con firmadigital.bo (Oficial)</button></div></div></section><!-- ===================================================================== --><!-- VISTA 2: VALIDAR DOCUMENTO                                            --><!-- ===================================================================== --><section id="tab-verify" class="tab-pane" data-astro-cid-lcdefpme><div class="section-box" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>🔍</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Auditoría Criptográfica de Firmas PAdES</h3><p class="section-desc" data-astro-cid-lcdefpme>Sube cualquier documento PDF firmado para comprobar su integridad matemática, estructura /Sig y confianza con la CA UPDS o con el validador estatal oficial de Bolivia.</p></div></div><div class="drop-zone" id="verify-drop-zone" data-astro-cid-lcdefpme><input type="file" id="verify-pdf" accept="application/pdf" class="file-input-hidden" onchange="handleVerifyPdfSelect(event)" data-astro-cid-lcdefpme><div class="drop-content" id="verify-drop-idle" data-astro-cid-lcdefpme><div class="drop-icon" data-astro-cid-lcdefpme>🔍</div><div class="drop-text" data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Haz clic para examinar</strong> o arrastra el PDF firmado aquí</div><div class="drop-hint" data-astro-cid-lcdefpme>Analizador criptográfico PAdES (ISO 32000-2 / RFC 3278)</div></div><div class="drop-file-selected" id="verify-selected-info" style="display:none;" data-astro-cid-lcdefpme><div class="file-icon-pdf" data-astro-cid-lcdefpme>PDF</div><div class="file-meta" data-astro-cid-lcdefpme><div class="file-name" id="verify-pdf-name" data-astro-cid-lcdefpme>documento_firmado.pdf</div><div class="file-size" id="verify-pdf-size" data-astro-cid-lcdefpme>0 KB</div></div><button type="button" class="btn-remove-file" onclick="clearVerifyPdf(event)" data-astro-cid-lcdefpme>✕ Quitar</button></div></div><div class="action-bar" style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;" data-astro-cid-lcdefpme><button type="button" class="btn-primary-action" id="btn-submit-verify" onclick="executeVerifyPdf()" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>🔍</span><span class="btn-label" data-astro-cid-lcdefpme>Auditoría Local (PAdES + CA UPDS)</span></button><button type="button" class="btn-primary-action" id="btn-submit-validate-bo" style="background:linear-gradient(135deg, #047857 0%, #065f46 100%);border:none;color:white;" onclick="executeValidateBolivian()" data-astro-cid-lcdefpme><span class="btn-icon" data-astro-cid-lcdefpme>🇧🇴</span><span class="btn-label" data-astro-cid-lcdefpme>Validar con firmadigital.bo (Servicio Oficial)</span></button></div><!-- CALLOUT INFORMATIVO DE INTEROPERABILIDAD ESTATAL --><div style="margin-top:18px;padding:14px 18px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-md);display:flex;align-items:flex-start;gap:12px;" data-astro-cid-lcdefpme><span style="font-size:22px;" data-astro-cid-lcdefpme>🇧🇴</span><div style="font-size:12px;color:#166534;line-height:1.5;" data-astro-cid-lcdefpme><strong data-astro-cid-lcdefpme>Compatibilidad Oficial con el Estado Plurinacional de Bolivia:</strong>Las firmas generadas en esta plataforma cumplen el estándar ISO 32000-2 y el algoritmo criptográfico SHA-256 requerido por AGETIC. Puedes contrastar cualquier PDF firmado aquí mismo o subiéndolo directamente al portal estatal oficial:<a href="https://validar.firmadigital.bo/#/pdf/archivo" target="_blank" rel="noopener noreferrer" style="color:#047857;font-weight:700;text-decoration:underline;margin-left:4px;" data-astro-cid-lcdefpme>validar.firmadigital.bo ↗</a></div></div></div><!-- CONTENEDOR DE RESULTADOS DE AUDITORÍA --><div id="verify-results-container" style="display:none;margin-top:20px;" data-astro-cid-lcdefpme></div></section><!-- ===================================================================== --><!-- VISTA 3: MI CERTIFICADO & HISTORIAL                                   --><!-- ===================================================================== --><section id="tab-account" class="tab-pane" data-astro-cid-lcdefpme><!-- PERFIL DEL USUARIO --><div class="profile-card" data-astro-cid-lcdefpme><div class="profile-left" data-astro-cid-lcdefpme><div class="profile-avatar" id="auth-avatar-text" data-astro-cid-lcdefpme>UP</div><div class="profile-info" data-astro-cid-lcdefpme><div class="profile-name-row" data-astro-cid-lcdefpme><h2 id="auth-user-name" data-astro-cid-lcdefpme>Usuario</h2><span class="badge-tag badge-success" data-astro-cid-lcdefpme>Certificado Activo</span></div><div class="profile-meta-row" data-astro-cid-lcdefpme><span id="auth-user-email" data-astro-cid-lcdefpme>...</span> ·<span id="auth-user-unit" data-astro-cid-lcdefpme>...</span> ·<span id="auth-user-city" data-astro-cid-lcdefpme>...</span></div></div></div><button type="button" class="btn-logout" onclick="handleLogout()" title="Cerrar sesión actual" data-astro-cid-lcdefpme>🚪 Cerrar Sesión</button></div><!-- CARNET DIGITAL CRIPTOGRÁFICO X.509 --><div class="section-box" style="margin-top:20px;" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>🛡️</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Certificado Digital Institucional X.509 v3</h3><p class="section-desc" data-astro-cid-lcdefpme>Identidad criptográfica oficial expedida por la Autoridad Certificadora Raíz UPDS.</p></div></div><div class="cert-diploma-card" data-astro-cid-lcdefpme><div class="cert-diploma-header" data-astro-cid-lcdefpme><div class="cert-diploma-title" data-astro-cid-lcdefpme><span data-astro-cid-lcdefpme>REPÚBLICA DE BOLIVIA · UNIVERSIDAD PRIVADA DOMINGO SAVIO</span><h4 data-astro-cid-lcdefpme>CERTIFICADO DE FIRMA DIGITAL ELECTRÓNICA AVANZADA (PAdES)</h4></div><div class="cert-diploma-seal" data-astro-cid-lcdefpme>UPDS CA</div></div><div class="cert-diploma-body" data-astro-cid-lcdefpme><div class="diploma-grid" data-astro-cid-lcdefpme><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Titular de la Credencial (Common Name):</span><span class="diploma-val" id="cert-cn-val" data-astro-cid-lcdefpme>...</span></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Correo Electrónico:</span><span class="diploma-val" id="cert-email-val" data-astro-cid-lcdefpme>...</span></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Autoridad Emisora (Issuer CA):</span><span class="diploma-val" style="color:var(--primary);font-weight:700;" data-astro-cid-lcdefpme>Autoridad Certificadora Raiz UPDS</span></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Algoritmo & Parámetros:</span><span class="diploma-val" data-astro-cid-lcdefpme>RSA 2048 bits · Resumen SHA-256 · ISO 32000-2</span></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Número de Serie (Hexadecimal):</span><code class="diploma-code" id="cert-serial-val" data-astro-cid-lcdefpme>...</code></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Huella Criptográfica (SHA-256 Fingerprint):</span><code class="diploma-code" id="cert-fp-val" data-astro-cid-lcdefpme>...</code></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Vigencia del Certificado:</span><span class="diploma-val" id="cert-validity-val" data-astro-cid-lcdefpme>...</span></div><div class="diploma-item" data-astro-cid-lcdefpme><span class="diploma-lbl" data-astro-cid-lcdefpme>Custodia de la Clave Privada:</span><span class="diploma-val" style="color:#059669;font-weight:700;" data-astro-cid-lcdefpme>🔒 Almacenada con cifrado simétrico AES-256 en reposo</span></div></div></div><div class="cert-diploma-footer" data-astro-cid-lcdefpme><a href="/api/auth/download_p12" class="btn-download-cert" id="btn-dl-p12" data-astro-cid-lcdefpme>📦 Descargar Contenedor PKCS#12 (.p12)</a><a href="/api/auth/download_cert" class="btn-download-cert" id="btn-dl-crt" data-astro-cid-lcdefpme>📜 Descargar Certificado (.crt)</a><a href="/api/auth/download_ca" class="btn-download-cert" id="btn-dl-ca" data-astro-cid-lcdefpme>🏛️ Descargar CA Raíz UPDS (.crt)</a></div></div></div><!-- HISTORIAL Y BITÁCORA DE DOCUMENTOS FIRMADOS --><div class="section-box" style="margin-top:20px;" data-astro-cid-lcdefpme><div class="section-header" data-astro-cid-lcdefpme><div class="step-num" data-astro-cid-lcdefpme>📋</div><div data-astro-cid-lcdefpme><h3 data-astro-cid-lcdefpme>Historial de Documentos Firmados (Auditoría)</h3><p class="section-desc" data-astro-cid-lcdefpme>Trazabilidad inmutable de todas las firmas digitales generadas con tu cuenta.</p></div></div><div id="audit-table-container" data-astro-cid-lcdefpme><div class="audit-empty-msg" id="audit-loading-msg" data-astro-cid-lcdefpme>Cargando bitácora de auditoría...</div><table class="audit-table" id="audit-logs-table" style="display:none;" data-astro-cid-lcdefpme><thead data-astro-cid-lcdefpme><tr data-astro-cid-lcdefpme><th data-astro-cid-lcdefpme>Fecha y Hora</th><th data-astro-cid-lcdefpme>Operación</th><th data-astro-cid-lcdefpme>Documento PDF</th><th data-astro-cid-lcdefpme>Hash SHA-256 (Original)</th></tr></thead><tbody id="audit-logs-tbody" data-astro-cid-lcdefpme></tbody></table></div></div></section></div><script>
+    // Variables de estado
+    let currentUser = null;
+    let selectedPdfFile = null;
+    let selectedVerifyPdfFile = null;
+    let signedPdfBlob = null;
+    let signedPdfFileName = 'documento_firmado.pdf';
+    let currentSigVisibility = 'invisible';
+    let currentCertSource = 'account';
+    let selectedP12File = null;
+    let inspectedP12Data = null;
+
+    // Canvas de firma
+    const canvas = document.getElementById('sig-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    let isDrawing = false;
+    let hasDrawnSignature = false;
+
+    function initCanvas() {
+      if (!canvas || !ctx) return;
+      ctx.strokeStyle = '#0f3d6e';
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (canvas.width / rect.width),
+          y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+      }
+
+      function startDraw(e) {
+        isDrawing = true;
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+        document.getElementById('canvas-watermark').style.display = 'none';
+        hasDrawnSignature = true;
+        e.preventDefault();
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        e.preventDefault();
+      }
+
+      function stopDraw() { isDrawing = false; }
+
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', draw);
+      window.addEventListener('mouseup', stopDraw);
+
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', draw, { passive: false });
+      window.addEventListener('touchend', stopDraw);
+    }
+
+    function clearSignatureCanvas() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('canvas-watermark').style.display = 'block';
+      hasDrawnSignature = false;
+      document.getElementById('sig-img-upload').value = '';
+    }
+
+    function handleSigImgUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        clearSignatureCanvas();
+        document.getElementById('canvas-watermark').style.display = 'none';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        hasDrawnSignature = true;
+        window.showToast('Sello Cargado', 'Imagen integrada a la estampa.', 'info');
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    // Navegación de pestañas principales (Firmar, Validar, Mi Certificado)
+    function goToTab(tabName) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+      if (btn) btn.classList.add('active');
+      const tab = document.getElementById('tab-' + tabName);
+      if (tab) tab.classList.add('active');
+    }
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.getAttribute('data-tab');
+        goToTab(tabName);
+      });
+    });
+
+    // Subpestañas del Auth Gate (Login vs Registro)
+    function switchGateTab(mode) {
+      document.getElementById('gate-btn-login').classList.toggle('active', mode === 'login');
+      document.getElementById('gate-btn-register').classList.toggle('active', mode === 'register');
+      document.getElementById('gate-panel-login').style.display = (mode === 'login') ? 'block' : 'none';
+      document.getElementById('gate-panel-register').style.display = (mode === 'register') ? 'block' : 'none';
+    }
+
+    // Toggle de visibilidad de firma (Invisible vs Visible)
+    function toggleSignatureFormat(format) {
+      currentSigVisibility = format;
+      const visualBox = document.getElementById('visual-config-box');
+      visualBox.style.display = (format === 'visible') ? 'block' : 'none';
+      if (format === 'visible') {
+        updatePreviewStamp();
+      }
+    }
+
+    function setReason(reason) {
+      document.getElementById('sign-reason').value = reason;
+      updatePreviewStamp();
+    }
+
+    function updateSignerPreview(name, desc) {
+      const activeName = document.getElementById('active-signer-name');
+      const activeDesc = document.getElementById('active-signer-desc');
+      if (activeName) activeName.textContent = name;
+      if (activeDesc && desc) activeDesc.textContent = desc;
+    }
+
+    function toggleCertSource(mode) {
+      currentCertSource = mode;
+      const box = document.getElementById('p12-config-box');
+      if (mode === 'p12') {
+        box.style.display = 'block';
+        if (inspectedP12Data && inspectedP12Data.subject && inspectedP12Data.subject.cn) {
+          updateSignerPreview(inspectedP12Data.subject.cn, `Certificado PKCS#12 (.p12) · ${inspectedP12Data.subject.org || 'UPDS'}`);
+        } else if (selectedP12File) {
+          updateSignerPreview(selectedP12File.name, 'Contenedor PKCS#12 cargado · Contraseña pendiente o lista');
+        } else {
+          updateSignerPreview('Certificado .p12 Externo', 'Selecciona tu archivo .p12 e introduce su contraseña de protección');
+        }
+      } else {
+        box.style.display = 'none';
+        if (currentUser) {
+          const serialShort = currentUser.serial_hex ? currentUser.serial_hex.substring(0, 16) : '';
+          updateSignerPreview(currentUser.full_name, `${currentUser.email} · Serie: ${serialShort}... · Válido hasta: ${(currentUser.valid_to || '').substring(0, 10)}`);
+        }
+      }
+      updatePreviewStamp();
+    }
+
+    function toggleP12Eye() {
+      const inp = document.getElementById('sign-p12-password');
+      inp.type = (inp.type === 'password') ? 'text' : 'password';
+    }
+
+    function handleP12Select(e) {
+      if (e.target.files && e.target.files[0]) {
+        applyP12File(e.target.files[0]);
+      }
+    }
+
+    function applyP12File(file) {
+      const lower = file.name.toLowerCase();
+      if (!lower.endsWith('.p12') && !lower.endsWith('.pfx')) {
+        window.showToast('Formato Inválido', 'Solo se admiten archivos .p12 o .pfx (PKCS#12).', 'error');
+        return;
+      }
+      selectedP12File = file;
+      document.getElementById('selected-p12-name').textContent = file.name;
+      document.getElementById('selected-p12-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('p12-drop-idle').style.display = 'none';
+      document.getElementById('p12-selected-info').style.display = 'flex';
+      document.getElementById('p12-inspect-badge').style.display = 'none';
+      inspectedP12Data = null;
+      updateSignerPreview(file.name, 'Contenedor PKCS#12 seleccionado · Haz clic en Inspeccionar o ingresa su contraseña');
+      updatePreviewStamp();
+    }
+
+    function clearSelectedP12(e) {
+      if (e) e.stopPropagation();
+      selectedP12File = null;
+      inspectedP12Data = null;
+      document.getElementById('sign-p12').value = '';
+      document.getElementById('sign-p12-password').value = '';
+      document.getElementById('p12-drop-idle').style.display = 'block';
+      document.getElementById('p12-selected-info').style.display = 'none';
+      document.getElementById('p12-inspect-badge').style.display = 'none';
+      if (currentUser) {
+        const serialShort = currentUser.serial_hex ? currentUser.serial_hex.substring(0, 16) : '';
+        updateSignerPreview(currentUser.full_name, `${currentUser.email} · Serie: ${serialShort}... · Válido hasta: ${(currentUser.valid_to || '').substring(0, 10)}`);
+      }
+      updatePreviewStamp();
+    }
+
+    async function inspectP12Details() {
+      if (!selectedP12File) {
+        window.showToast('Falta Archivo .p12', 'Por favor selecciona un archivo .p12 o .pfx primero.', 'warning');
+        return;
+      }
+      const pwd = document.getElementById('sign-p12-password').value;
+      const fd = new FormData();
+      fd.append('p12', selectedP12File);
+      fd.append('password', pwd);
+
+      const btn = document.getElementById('btn-inspect-p12');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Inspeccionando...</span>';
+
+      try {
+        const res = await fetch('/api/inspect_cert', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Fallo al descifrar o inspeccionar el archivo .p12');
+        }
+
+        inspectedP12Data = data;
+        document.getElementById('p12-inspect-cn').textContent = data.subject?.cn || 'Sin nombre';
+        document.getElementById('p12-inspect-org').textContent = data.subject?.org || 'UPDS';
+        document.getElementById('p12-inspect-issuer').textContent = data.issuer?.cn || 'CA Desconocida';
+        document.getElementById('p12-inspect-valid').textContent = data.valid_to ? data.valid_to.substring(0, 10) : 'N/A';
+        document.getElementById('p12-inspect-badge').style.display = 'block';
+
+        if (data.subject?.cn) {
+          updateSignerPreview(data.subject.cn, `Certificado PKCS#12 (.p12) de ${data.subject.cn}`);
+        }
+        updatePreviewStamp();
+
+        if (data.has_private_key) {
+          window.showToast('Certificado Válido', `Titular: "${data.subject?.cn || 'OK'}" con clave privada verificada.`, 'success');
+        } else {
+          window.showToast('Atención', 'El contenedor no incluye clave privada; solo servirá para verificar.', 'warning');
+        }
+      } catch (err) {
+        window.showToast('Error en .p12', err.message || 'Contraseña incorrecta o archivo inválido.', 'error', 6000);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">🔍</span><span class="btn-label">Inspeccionar Certificado</span>';
+      }
+    }
+
+    function updatePreviewStamp() {
+      let signer = currentUser ? currentUser.full_name : 'Estudiante UPDS';
+      if (currentCertSource === 'p12') {
+        if (inspectedP12Data && inspectedP12Data.subject && inspectedP12Data.subject.cn) {
+          signer = inspectedP12Data.subject.cn;
+        } else if (selectedP12File) {
+          signer = selectedP12File.name.replace(/\.[^/.]+$/, "");
+        }
+      }
+      const reason = document.getElementById('sign-reason').value || 'Conformidad técnica';
+      const loc = document.getElementById('sign-loc').value || 'La Paz, BO';
+      document.getElementById('preview-signer').textContent = 'Firmante: ' + signer;
+      document.getElementById('preview-reason').textContent = 'Motivo: ' + reason;
+      document.getElementById('preview-date').textContent = 'Fecha: ' + new Date().toLocaleDateString() + ' · ' + loc;
+    }
+
+    // Drag and Drop para PDF a firmar
+    const dropZone = document.getElementById('pdf-drop-zone');
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        applyPdfFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handlePdfSelect(e) {
+      if (e.target.files && e.target.files[0]) {
+        applyPdfFile(e.target.files[0]);
+      }
+    }
+
+    function applyPdfFile(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        window.showToast('Formato Inválido', 'Solo se admiten documentos en formato PDF.', 'error');
+        return;
+      }
+      selectedPdfFile = file;
+      document.getElementById('selected-pdf-name').textContent = file.name;
+      document.getElementById('selected-pdf-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('pdf-drop-idle').style.display = 'none';
+      document.getElementById('pdf-selected-info').style.display = 'flex';
+    }
+
+    function clearSelectedPdf(e) {
+      if (e) e.stopPropagation();
+      selectedPdfFile = null;
+      document.getElementById('sign-pdf').value = '';
+      document.getElementById('pdf-drop-idle').style.display = 'block';
+      document.getElementById('pdf-selected-info').style.display = 'none';
+      document.getElementById('sign-result-card').style.display = 'none';
+    }
+
+    // Drag and Drop para Contenedor .p12
+    const p12DropZone = document.getElementById('p12-drop-zone');
+    if (p12DropZone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        p12DropZone.addEventListener(name, (e) => { e.preventDefault(); p12DropZone.classList.add('dragover'); });
+      });
+      ['dragleave', 'drop'].forEach(name => {
+        p12DropZone.addEventListener(name, (e) => { e.preventDefault(); p12DropZone.classList.remove('dragover'); });
+      });
+      p12DropZone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          applyP12File(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    // Drag and Drop para PDF a auditar
+    const verifyDropZone = document.getElementById('verify-drop-zone');
+    ['dragenter', 'dragover'].forEach(name => {
+      verifyDropZone.addEventListener(name, (e) => { e.preventDefault(); verifyDropZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      verifyDropZone.addEventListener(name, (e) => { e.preventDefault(); verifyDropZone.classList.remove('dragover'); });
+    });
+    verifyDropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        applyVerifyPdfFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleVerifyPdfSelect(e) {
+      if (e.target.files && e.target.files[0]) {
+        applyVerifyPdfFile(e.target.files[0]);
+      }
+    }
+
+    function applyVerifyPdfFile(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        window.showToast('Formato Inválido', 'Solo se admiten archivos PDF.', 'error');
+        return;
+      }
+      selectedVerifyPdfFile = file;
+      document.getElementById('verify-pdf-name').textContent = file.name;
+      document.getElementById('verify-pdf-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      document.getElementById('verify-drop-idle').style.display = 'none';
+      document.getElementById('verify-selected-info').style.display = 'flex';
+      document.getElementById('verify-results-container').style.display = 'none';
+    }
+
+    function clearVerifyPdf(e) {
+      if (e) e.stopPropagation();
+      selectedVerifyPdfFile = null;
+      document.getElementById('verify-pdf').value = '';
+      document.getElementById('verify-drop-idle').style.display = 'block';
+      document.getElementById('verify-selected-info').style.display = 'none';
+      document.getElementById('verify-results-container').style.display = 'none';
+    }
+
+    // AUTENTICACIÓN: VERIFICAR ESTADO
+    async function checkUserAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          currentUser = data.user;
+          renderAuthenticatedUser(currentUser);
+        } else {
+          currentUser = null;
+          renderAnonymousUser();
+        }
+      } catch (e) {
+        currentUser = null;
+        renderAnonymousUser();
+      }
+    }
+
+    function renderAuthenticatedUser(user) {
+      document.getElementById('auth-loading-state').style.display = 'none';
+      document.getElementById('auth-gate-wall').style.display = 'none';
+      document.getElementById('authenticated-suite').style.display = 'block';
+
+      // Cabecera superior
+      const headerPill = document.getElementById('user-header-pill');
+      if (headerPill) {
+        const initials = user.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+        headerPill.innerHTML = `
+          <div class="user-pill-logged" onclick="goToTab('account')" title="Ver mi certificado e historial">
+            <span class="user-avatar-tiny">${initials}</span>
+            <span>${user.full_name}</span>
+          </div>
+          <button type="button" class="btn-logout" onclick="handleLogout()" title="Cerrar sesión">Salir</button>
+        `;
+      }
+
+      // Identidad en la pestaña de firma
+      document.getElementById('active-signer-name').textContent = user.full_name;
+      document.getElementById('active-signer-desc').textContent = 
+        `${user.email} · Serie: ${user.serial_hex.substring(0, 16)}... · Válido hasta: ${(user.valid_to || '').substring(0, 10)}`;
+
+      // Pestaña Mi Certificado
+      const initials = user.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      document.getElementById('auth-avatar-text').textContent = initials;
+      document.getElementById('auth-user-name').textContent = user.full_name;
+      document.getElementById('auth-user-email').textContent = user.email;
+      document.getElementById('auth-user-unit').textContent = user.unit || 'Seguridad Informática';
+      document.getElementById('auth-user-city').textContent = `${user.city || 'La Paz'}, ${user.country || 'BO'}`;
+
+      document.getElementById('cert-cn-val').textContent = user.full_name;
+      document.getElementById('cert-email-val').textContent = user.email;
+      document.getElementById('cert-serial-val').textContent = user.serial_hex;
+      document.getElementById('cert-fp-val').textContent = user.fingerprint_sha256;
+      document.getElementById('cert-validity-val').textContent = 
+        `${(user.valid_from || '').substring(0, 10)} hasta ${(user.valid_to || '').substring(0, 10)}`;
+
+      updatePreviewStamp();
+      loadUserAuditLogs();
+    }
+
+    function renderAnonymousUser() {
+      document.getElementById('auth-loading-state').style.display = 'none';
+      document.getElementById('auth-gate-wall').style.display = 'block';
+      document.getElementById('authenticated-suite').style.display = 'none';
+
+      const headerPill = document.getElementById('user-header-pill');
+      if (headerPill) {
+        headerPill.innerHTML = `
+          <div class="status-pill" style="border-color:#fecaca;background:#fef2f2;color:#991b1b;">
+            <span class="status-dot" style="background:#ef4444;"></span>
+            <span>Acceso Bloqueado</span>
+          </div>
+        `;
+      }
+    }
+
+    async function handleGateRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-gate-register');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Generando RSA 2048 y emitiendo certificado CA...</span>';
+
+      const payload = {
+        full_name: document.getElementById('gate-reg-name').value,
+        email: document.getElementById('gate-reg-email').value,
+        password: document.getElementById('gate-reg-password').value,
+        unit: document.getElementById('gate-reg-unit').value,
+        city: document.getElementById('gate-reg-city').value,
+        organization: document.getElementById('gate-reg-org').value,
+      };
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Fallo en el registro');
+        }
+
+        window.showToast('¡Cuenta Creada!', 'Certificado emitido por CA UPDS. Plataforma desbloqueada.', 'success', 5000);
+        await checkUserAuth();
+      } catch (err) {
+        window.showToast('Error de Registro', err.message, 'error', 5000);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">⚡</span><span class="btn-label">Crear Cuenta & Emitir Certificado X.509</span>';
+      }
+    }
+
+    async function handleGateLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-gate-login');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Verificando credenciales...</span>';
+
+      const payload = {
+        email: document.getElementById('gate-login-email').value,
+        password: document.getElementById('gate-login-password').value,
+      };
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Credenciales inválidas');
+        }
+
+        window.showToast('Acceso Autorizado', 'Bienvenido a la suite UPDS.', 'success');
+        await checkUserAuth();
+      } catch (err) {
+        window.showToast('Error de Acceso', err.message, 'error', 5000);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">🚀</span><span class="btn-label">Ingresar a la Plataforma</span>';
+      }
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.showToast('Sesión Finalizada', 'Has cerrado sesión correctamente.', 'info');
+        currentUser = null;
+        renderAnonymousUser();
+      } catch (e) {
+        window.showToast('Error', 'Fallo al cerrar sesión', 'error');
+      }
+    }
+
+    // EJECUTAR FIRMA DIGITAL PAdES
+    async function executeSignPdf() {
+      if (!selectedPdfFile) {
+        window.showToast('Falta Documento', 'Por favor selecciona un archivo PDF para firmar.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-sign');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Firmando documento PAdES...</span>';
+
+      const fd = new FormData();
+      fd.append('pdf', selectedPdfFile);
+
+      if (currentCertSource === 'p12') {
+        if (!selectedP12File) {
+          window.showToast('Falta Archivo .p12', 'Por favor selecciona tu archivo .p12 o .pfx para firmar.', 'warning');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="btn-icon">✍️</span><span class="btn-label">Firmar Documento con PAdES</span>';
+          return;
+        }
+        const p12Pwd = document.getElementById('sign-p12-password').value;
+        fd.append('cert_mode', 'p12');
+        fd.append('p12', selectedP12File);
+        fd.append('password', p12Pwd);
+        const contactName = (inspectedP12Data && inspectedP12Data.subject && inspectedP12Data.subject.cn)
+          ? inspectedP12Data.subject.cn
+          : (currentUser ? currentUser.full_name : 'Titular de Certificado');
+        fd.append('contact', contactName);
+      } else {
+        fd.append('cert_mode', 'account');
+        fd.append('contact', currentUser ? currentUser.full_name : 'Estudiante UPDS');
+      }
+
+      fd.append('reason', document.getElementById('sign-reason').value);
+      fd.append('location', document.getElementById('sign-loc').value);
+      fd.append('hash_algo', 'sha256');
+
+      const isVisual = (currentSigVisibility === 'visible');
+      fd.append('visual_signature', isVisual ? 'true' : 'false');
+      if (isVisual) {
+        fd.append('sigpage', document.getElementById('sign-page').value);
+        fd.append('visual_position', document.getElementById('sign-pos').value);
+        if (hasDrawnSignature) {
+          fd.append('signature_image_b64', canvas.toDataURL('image/png'));
+        }
+      }
+
+      try {
+        const res = await fetch('/api/sign', { method: 'POST', body: fd });
+        if (res.status === 401) {
+          window.showToast('Acceso Denegado (401)', 'Middleware: Debes iniciar sesión para firmar.', 'error', 5000);
+          renderAnonymousUser();
+          return;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Error del servidor' }));
+          throw new Error(err.error || 'Fallo en la firma');
+        }
+
+        const blob = await res.blob();
+        signedPdfBlob = blob;
+        const origBase = selectedPdfFile.name.replace(/\.[^/.]+$/, "");
+        signedPdfFileName = origBase + '_firmado.pdf';
+
+        // Auto-descargar
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = signedPdfFileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        document.getElementById('sign-result-text').textContent = 
+          `Se generó "${signedPdfFileName}" (${(blob.size / 1024).toFixed(1)} KB) con firma PAdES ISO 32000-2 compatible con validar.firmadigital.bo.`;
+        document.getElementById('sign-result-card').style.display = 'block';
+
+        document.getElementById('btn-download-signed-pdf').onclick = () => {
+          const u = URL.createObjectURL(signedPdfBlob);
+          const dl = document.createElement('a');
+          dl.href = u;
+          dl.download = signedPdfFileName;
+          dl.click();
+          URL.revokeObjectURL(u);
+        };
+
+        window.showToast('¡Firma Completada!', 'El PDF firmado ha sido descargado automáticamente.', 'success');
+        loadUserAuditLogs();
+      } catch (err) {
+        window.showToast('Error de Firma', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">✍️</span><span class="btn-label">Firmar Documento con PAdES</span>';
+      }
+    }
+
+    function goToAuditWithSignedPdf() {
+      if (!signedPdfBlob) return;
+      const file = new File([signedPdfBlob], signedPdfFileName, { type: 'application/pdf' });
+      applyVerifyPdfFile(file);
+      goToTab('verify');
+      executeVerifyPdf();
+    }
+
+    function goToValidateBoliviaWithSignedPdf() {
+      if (!signedPdfBlob) return;
+      const file = new File([signedPdfBlob], signedPdfFileName, { type: 'application/pdf' });
+      applyVerifyPdfFile(file);
+      goToTab('verify');
+      executeValidateBolivian();
+    }
+
+    // AUDITAR / VALIDAR PDF LOCALMENTE
+    async function executeVerifyPdf() {
+      if (!selectedVerifyPdfFile) {
+        window.showToast('Falta Documento', 'Por favor selecciona un PDF firmado para auditar.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-verify');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Auditando criptografía PAdES...</span>';
+
+      const fd = new FormData();
+      fd.append('pdf', selectedVerifyPdfFile);
+
+      const container = document.getElementById('verify-results-container');
+      container.innerHTML = '';
+      container.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/verify', { method: 'POST', body: fd });
+        if (res.status === 401) {
+          window.showToast('Acceso Denegado (401)', 'Middleware: Debes iniciar sesión para validar.', 'error', 5000);
+          renderAnonymousUser();
+          return;
+        }
+        const j = await res.json();
+        if (!res.ok || !j.ok) {
+          throw new Error(j.error || 'Error al validar el documento');
+        }
+
+        if (!j.has_signatures || j.signatures.length === 0) {
+          container.innerHTML = `
+            <div class="audit-card" style="border-left: 4px solid #d97706;">
+              <h4 style="color:#d97706;margin:0 0 4px;">⚠️ Sin Firmas Digitales Detectadas</h4>
+              <p style="font-size:13px;color:#64748b;margin:0;">El archivo subido no contiene objetos de firma PAdES (/Sig) o el diccionario AcroForm está vacío.</p>
+            </div>
+          `;
+        } else {
+          let html = `<h4 style="margin-bottom:14px;color:var(--primary);font-size:15px;">Firmas Detectadas por Validador Local (${j.signatures.length}):</h4>`;
+          j.signatures.forEach(s => {
+            html += `
+              <div class="audit-card" style="border-left: 4px solid ${s.integrity && s.signature && s.trusted ? '#10b981' : '#f59e0b'};">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:10px;">
+                  <span style="font-weight:800;color:var(--primary);">Firma #${s.index} · PAdES CMS</span>
+                  <span class="badge-tag ${s.integrity ? 'badge-success' : 'badge-danger'}">${s.integrity ? 'DOCUMENTO INALTERADO' : 'CORRUPTO'}</span>
+                </div>
+                <div class="audit-metric-grid">
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">Integridad (Hash SHA-256):</span>
+                    <span class="${s.integrity ? 'status-ok' : 'status-bad'}">${s.integrity ? '✅ Inalterado' : '❌ Alterado'}</span>
+                  </div>
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">Firma Criptográfica:</span>
+                    <span class="${s.signature ? 'status-ok' : 'status-bad'}">${s.signature ? '✅ RSA Correcto' : '❌ Corrupta'}</span>
+                  </div>
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">Cadena de Confianza:</span>
+                    <span class="${s.trusted ? 'status-ok' : 'status-bad'}">${s.trusted ? '🏛️ CA UPDS Confiable' : '⚠️ Desconocida'}</span>
+                  </div>
+                </div>
+                <div style="margin-top:12px;font-size:12px;color:#475569;line-height:1.5;">
+                  <b>Dictamen técnico:</b> ${s.explanation}
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        }
+        container.style.display = 'block';
+      } catch (err) {
+        window.showToast('Error de Validación', err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="btn-icon">🔍</span><span class="btn-label">Auditoría Local (PAdES + CA UPDS)</span>';
+      }
+    }
+
+    // VALIDAR CON EL SERVICIO OFICIAL DEL ESTADO PLURINACIONAL DE BOLIVIA (firmadigital.bo)
+    async function executeValidateBolivian() {
+      if (!selectedVerifyPdfFile) {
+        window.showToast('Falta Documento', 'Por favor selecciona un PDF firmado para validar con firmadigital.bo.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-validate-bo');
+      const origHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Consultando firmadigital.bo...</span>';
+      }
+
+      const fd = new FormData();
+      fd.append('pdf', selectedVerifyPdfFile);
+
+      const container = document.getElementById('verify-results-container');
+      container.innerHTML = '';
+      container.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/validate_bo', { method: 'POST', body: fd });
+        const j = await res.json();
+        if (!res.ok || !j.ok) {
+          throw new Error(j.error || 'No se pudo contactar con el validador oficial');
+        }
+
+        const raw = j.raw || {};
+        const obj = raw.objeto || {};
+        const firmas = obj.firmas || [];
+
+        if (firmas.length === 0) {
+          container.innerHTML = `
+            <div class="audit-card" style="border-left: 4px solid #ef4444;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="font-size:24px;">🇧🇴</span>
+                <h4 style="color:#b91c1c;margin:0;">Sin Firmas Digitales Reconocidas por firmadigital.bo</h4>
+              </div>
+              <p style="font-size:13px;color:#64748b;margin:0 0 10px;">${raw.mensaje || 'El servicio oficial no detectó firmas PAdES válidas en este PDF.'}</p>
+              <a href="https://validar.firmadigital.bo/#/pdf/archivo" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#047857;font-weight:700;">
+                Contrastar manualmente en validar.firmadigital.bo ↗
+              </a>
+            </div>
+          `;
+        } else {
+          let html = `
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+              <div>
+                <h4 style="margin:0;color:#065f46;font-size:16px;display:flex;align-items:center;gap:8px;">
+                  <span>🇧🇴</span> Validación Oficial AGETIC (firmadigital.bo)
+                </h4>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">
+                  ${raw.mensaje || ''} · Código Hash SHA-1: <code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${obj.codigoHash || 'N/D'}</code>
+                </div>
+              </div>
+              <a href="https://validar.firmadigital.bo/#/pdf/archivo" target="_blank" rel="noopener noreferrer" class="btn-subtle" style="font-size:12px;text-decoration:none;">
+                Abrir Portal Estatal Oficial ↗
+              </a>
+            </div>
+          `;
+
+          firmas.forEach((f, idx) => {
+            const cert = f.certificado || {};
+            const det = f.detalleValidacion || {};
+            const isDocAuthentic = f.noModificado === true;
+            const isPeriodValid = f.firmadoDuranteVigencia === true;
+            const isChainValid = f.cadenaConfianza === true;
+            const isRevocationValid = f.firmadoAntesRevocacion === true;
+
+            const borderCol = isDocAuthentic ? '#10b981' : '#ef4444';
+
+            html += `
+              <div class="audit-card" style="border-left: 4px solid ${borderCol};">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                  <div>
+                    <span style="font-weight:800;color:var(--primary);font-size:15px;">Firma #${idx + 1}: ${cert.nombreSignatario || 'Signatario'}</span>
+                    <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                      Fecha de firma: <b>${f.fechaFirma ? new Date(f.fechaFirma).toLocaleString() : 'N/D'}</b>
+                    </div>
+                  </div>
+                  <span class="badge-tag ${isDocAuthentic ? 'badge-success' : 'badge-danger'}" style="font-size:11px;padding:4px 10px;">
+                    ${isDocAuthentic ? 'DOCUMENTO AUTÉNTICO (INTEGRIDAD VÁLIDA)' : 'DOCUMENTO ALTERADO'}
+                  </span>
+                </div>
+
+                <!-- CUADRÍCULA DE LOS 4 CRITERIOS OFICIALES DE BOLIVIA -->
+                <div class="audit-metric-grid">
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">1. Integridad de Documento:</span>
+                    <span class="${isDocAuthentic ? 'status-ok' : 'status-bad'}">
+                      ${isDocAuthentic ? '✅ Documento Auténtico' : '❌ Alterado'}
+                    </span>
+                    <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">
+                      ${det.documentoDescripcion || 'El documento no ha sido modificado después de la firma.'}
+                    </div>
+                  </div>
+
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">2. Período de Vigencia:</span>
+                    <span class="${isPeriodValid ? 'status-ok' : 'status-bad'}">
+                      ${isPeriodValid ? '✅ Firmado en Período Válido' : '❌ Fuera de Vigencia'}
+                    </span>
+                    <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">
+                      ${det.periodoValidezDescripcion || 'Firma realizada en el período de vigencia.'}
+                    </div>
+                  </div>
+
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">3. Cadena de Confianza:</span>
+                    <span class="${isChainValid ? 'status-ok' : 'status-warn'}">
+                      ${isChainValid ? '🏛️ Raíz Estatal Bolivia' : '⚠️ CA Privada UPDS'}
+                    </span>
+                    <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">
+                      ${det.cadenaConfianzaDescripcion || 'Cadena privada académica'}. 
+                      <i>(La CA UPDS es académica, no acreditada ante ATT/AGETIC conforme a Ley 164).</i>
+                    </div>
+                  </div>
+
+                  <div class="audit-badge-box">
+                    <span class="badge-lbl">4. Estado de Revocación:</span>
+                    <span class="${isRevocationValid ? 'status-ok' : 'status-info'}">
+                      ${isRevocationValid ? '✅ No Revocado' : 'ℹ️ Sin Servicio CRL Público'}
+                    </span>
+                    <div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.4;">
+                      ${det.revocacionDescripcion || 'Sin URL de revocación pública.'}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DETALLES DEL CERTIFICADO DETECTADO POR EL SERVICIO OFICIAL -->
+                <div style="margin-top:14px;padding:12px 14px;background:var(--surface-subtle);border-radius:var(--radius-sm);border:1px solid var(--border);">
+                  <div style="font-weight:700;font-size:12px;color:var(--primary);margin-bottom:8px;">
+                    📜 Atributos del Certificado X.509 identificados por firmadigital.bo:
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:8px;font-size:12px;color:#334155;">
+                    <div><b>Titular:</b> ${cert.nombreSignatario || 'N/D'}</div>
+                    <div><b>Correo:</b> ${cert.correoElectronicoSignatario || 'N/D'}</div>
+                    <div><b>Organización:</b> ${cert.organizacionSignatario || 'N/D'}</div>
+                    <div><b>Unidad:</b> ${cert.unidadSignatario || 'N/D'}</div>
+                    <div><b>Autoridad Emisora (ECA):</b> ${cert.nombreECA || 'N/D'} (${cert.paisECA || 'BO'})</div>
+                    <div><b>Nº Serie:</b> <code style="font-size:10px;">${cert.numeroSerie || 'N/D'}</code></div>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          container.innerHTML = html;
+        }
+        container.style.display = 'block';
+        window.showToast('Validación Oficial Completada', 'El informe de firmadigital.bo ha sido procesado.', 'success');
+      } catch (err) {
+        window.showToast('Error de Validación Oficial', err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }
+      }
+    }
+
+    // CARGAR BITÁCORA DE AUDITORÍA
+    async function loadUserAuditLogs() {
+      const msg = document.getElementById('audit-loading-msg');
+      const table = document.getElementById('audit-logs-table');
+      const tbody = document.getElementById('audit-logs-tbody');
+      if (!msg || !table || !tbody) return;
+
+      try {
+        const res = await fetch('/api/auth/activity');
+        const data = await res.json();
+        if (data.ok && data.logs && data.logs.length > 0) {
+          tbody.innerHTML = '';
+          data.logs.forEach(log => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(log.created_at).toLocaleString();
+            const actionBadge = log.action === 'SIGN_PDF' 
+              ? '<span class="badge-tag badge-success">Firma PAdES</span>'
+              : log.action === 'REGISTER'
+              ? '<span class="badge-tag badge-info">Emisión Cert</span>'
+              : `<span class="badge-tag badge-info">${log.action}</span>`;
+            
+            const hashShort = log.file_hash ? log.file_hash.substring(0, 16) + '...' : '-';
+            tr.innerHTML = `
+              <td>${dateStr}</td>
+              <td>${actionBadge} · ${log.details || ''}</td>
+              <td><b>${log.filename || '-'}</b></td>
+              <td><code style="font-size:11px;background:#f1f5f9;padding:2px 4px;border-radius:3px;">${hashShort}</code></td>
+            `;
+            tbody.appendChild(tr);
+          });
+          msg.style.display = 'none';
+          table.style.display = 'table';
+        } else {
+          msg.textContent = 'Aún no tienes documentos firmados en tu bitácora.';
+          msg.style.display = 'block';
+          table.style.display = 'none';
+        }
+      } catch (e) {
+        msg.textContent = 'No se pudo cargar la bitácora de auditoría.';
+      }
+    }
+
+    // Inicializaciones al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+      initCanvas();
+      checkUserAuth();
+    });
+  </script></main><footer class="app-footer"><div>Universidad Privada Domingo Savio — Facultad de Ingeniería · Ingeniería de Sistemas</div><div>Estándar PAdES (PDF Advanced Electronic Signatures) · Validador oficial:<a href="https://validar.firmadigital.bo" target="_blank" rel="noopener">validar.firmadigital.bo</a></div></footer></div><div id="toast-container"></div><script>
+    // Utilidad global de notificaciones Toast
+    window.showToast = function(title, msg, type = 'info', duration = 4500) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+
+      toast.innerHTML = `
+        <span style="font-size:18px;">${icons[type] || 'ℹ️'}</span>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-msg">${msg}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 250);
+      }, duration);
+    };
+
+    // Monitoreo de salud del backend
+    async function checkBackendHealth() {
+      const pill = document.getElementById('backend-status-pill');
+      const dot = document.getElementById('backend-dot');
+      const text = document.getElementById('backend-status-text');
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          dot.className = 'status-dot active';
+          text.textContent = 'Backend Conectado (Local)';
+          pill.style.borderColor = 'var(--success-border)';
+          pill.style.background = 'var(--success-light)';
+          pill.style.color = '#065f46';
+        } else {
+          throw new Error();
+        }
+      } catch (e) {
+        dot.className = 'status-dot';
+        text.textContent = 'Backend Offline (:5000)';
+        pill.style.borderColor = 'var(--danger-border)';
+        pill.style.background = 'var(--danger-light)';
+        pill.style.color = '#991b1b';
+      }
+    }
+
+    checkBackendHealth();
+    setInterval(checkBackendHealth, 15000);
+  </script></body></html>

@@ -352,6 +352,20 @@ services:
       - tso-net
     restart: unless-stopped
 
+  # ------------------------------------------------------------------
+  # Firma Digital PAdES — Autenticación y Validación Criptográfica
+  # ------------------------------------------------------------------
+  firma-digital:
+    build: ./services/firma-digital
+    container_name: tso-firma-digital
+    ports:
+      - "${FIRMA_PORT:-8090}:8090"
+    volumes:
+      - firma_data:/app/backend/data
+    networks:
+      - tso-net
+    restart: unless-stopped
+
 # Volúmenes con nombre: los datos persisten aunque los contenedores se borren.
 volumes:
   dhcp_state:
@@ -366,6 +380,7 @@ volumes:
   alertmanager_data:
   grafana_data:
   evebox_data:
+  firma_data:
 
 # Red interna del proyecto (interconexión de contenedores).
 # Kea queda FUERA de esta red (network_mode: host).

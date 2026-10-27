@@ -15,6 +15,8 @@ Cada servicio tiene su carpeta con su configuración; algunos usan una imagen of
 | [`webmail/`](webmail/README.md) | Roundcube | listo (webmail local) |
 | [`filemanager/`](filemanager/README.md) | Filebrowser — gestor web de los shares del DC | listo |
 | [`monitoring/`](monitoring/README.md) | Prometheus + Grafana + Alertmanager (en dc1) — alertas por correo | nuevo |
+| [`uyuni-web/`](uyuni-web/README.md) | Uyuni Way Web (puerto 8085) — SPA React/Vite | listo |
+| [`firma-digital/`](firma-digital/README.md) | Firma Digital PAdES (puerto 8090) — Autenticación, PKI y Criptografía de documentos | nuevo |
 | [`apps/`](apps/README.md) | Apps internas (Fase 5) | **pendiente (vacío)** |
 
 > Los **datos** de los archivos viven en el DC nativo (`/srv/samba`, ver

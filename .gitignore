@@ -13,5 +13,17 @@ services/web/tls/
 # Logs locales
 *.log
 
+# LaTeX auxiliares
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.toc
+*.synctex.gz
+
 # Sistema
 .DS_Store

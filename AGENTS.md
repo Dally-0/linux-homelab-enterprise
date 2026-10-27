@@ -93,6 +93,7 @@ máquina Debian** ("laptop siempre encendida", estilo lab). Es la evolución
 | Métricas + alertas por mail | Prometheus + Grafana + Alertmanager (Grafana en `grafana.sudoers.lan`) | CONTENEDOR (`services/monitoring`, dc1) |
 | WiFi 802.1X (WPA2-Enterprise) | FreeRADIUS → `ntlm_auth` → AD (usuarios del dominio) | NATIVO (`server/radius/`) |
 | IDS / IPS (Seguridad de red) | Suricata 7 (AF_PACKET pasivo / NFQUEUE en línea) | NATIVO (`server/suricata/`) |
+| Firma Digital (Criptografía PAdES / PKI) | Flask + Astro (puerto 8090, repo `a5-firmado-digital`) | CONTENEDOR (`services/firma-digital/`) |
 | Backup | restic (`server/backup.sh` + `restore.sh`, cron) | NATIVO |
 
 ## Estructura del repo

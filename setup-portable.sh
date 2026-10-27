@@ -183,6 +183,7 @@ ${CLR_BOLD}${CLR_GREEN}═══════════════════
   ${CLR_BOLD}Acceso a Servicios (Desde tu PC o cualquier equipo de la LAN):${CLR_RESET}
     • ${CLR_BOLD}Portal Web Principal :${CLR_RESET} http://${LAN_IP}/ (o https://${LAN_IP}/)
     • ${CLR_BOLD}Uyuni Way Web (Vite) :${CLR_RESET} ${CLR_CYAN}http://${LAN_IP}:8085/${CLR_RESET} (Web independiente React)
+    • ${CLR_BOLD}Firma Digital PAdES  :${CLR_RESET} ${CLR_CYAN}http://${LAN_IP}:8090/${CLR_RESET} (Criptografía y Certificados UPDS)
     • ${CLR_BOLD}Webmail (Roundcube)  :${CLR_RESET} http://${LAN_IP}:8080/
     • ${CLR_BOLD}Archivos Web         :${CLR_RESET} http://${LAN_IP}:8082/
     • ${CLR_BOLD}Métricas (Grafana)   :${CLR_RESET} http://${LAN_IP}:3000/  (admin / admin)
