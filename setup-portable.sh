@@ -147,6 +147,9 @@ fi
 # Generar directorio local para shares de archivos si no existen
 mkdir -p "$DIR/services/filemanager/data/departamentos" "$DIR/services/filemanager/data/respaldo"
 mkdir -p /srv/samba/departamentos /srv/samba/respaldo 2>/dev/null || true
+mkdir -p /var/log/suricata
+touch /var/log/suricata/eve.json /var/log/suricata/fast.log
+chmod 666 /var/log/suricata/eve.json /var/log/suricata/fast.log 2>/dev/null || true
 
 # 7. Despliegue de los Contenedores Docker
 log "[5/5] Levantando los contenedores de la infraestructura..."
@@ -178,8 +181,9 @@ ${CLR_BOLD}${CLR_GREEN}═══════════════════
     • ${CLR_BOLD}Gestión Docker       :${CLR_RESET} https://${LAN_IP}:9443/
     • ${CLR_BOLD}Impresión (CUPS)     :${CLR_RESET} http://${LAN_IP}:1631/
 
-  ${CLR_BOLD}Monitoreo del IDS / IPS (Suricata):${CLR_RESET}
-    • Ver alertas en vivo      : ${CLR_YELLOW}sudo tail -f /var/log/suricata/fast.log${CLR_RESET}
+  ${CLR_BOLD}Monitoreo Gráfico y Consola IDS/IPS:${CLR_RESET}
+    • ${CLR_BOLD}GUI de Alertas (EveBox):${CLR_RESET} ${CLR_CYAN}http://${LAN_IP}:5636/${CLR_RESET} (Panel visual de Suricata)
+    • Ver alertas por terminal : ${CLR_YELLOW}sudo tail -f /var/log/suricata/fast.log${CLR_RESET}
     • Cambiar a Modo IPS (drop): ${CLR_YELLOW}sudo bash server/suricata/ips-toggle.sh --ips${CLR_RESET}
     • Probar detección/bloqueo : ${CLR_YELLOW}sudo bash server/suricata/test-ids-ips.sh${CLR_RESET}
 

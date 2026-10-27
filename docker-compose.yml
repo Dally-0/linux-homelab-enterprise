@@ -316,6 +316,34 @@ services:
       - tso-net
 
   # ------------------------------------------------------------------
+  # EveBox — Consola Gráfica Web para Suricata IDS/IPS
+  # ------------------------------------------------------------------
+  evebox:
+    image: jasonish/evebox:latest
+    container_name: tso-evebox
+    restart: unless-stopped
+    ports:
+      - "${EVEBOX_PORT:-5636}:5636"
+    volumes:
+      - /var/log/suricata:/var/log/suricata:ro
+      - evebox_data:/var/lib/evebox
+    command:
+      - evebox
+      - server
+      - --no-auth
+      - --no-tls
+      - --datastore
+      - sqlite
+      - --input
+      - /var/log/suricata/eve.json
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5636"
+    networks:
+      - tso-net
+
+  # ------------------------------------------------------------------
   # EN DESARROLLO (fases posteriores)
   # ------------------------------------------------------------------
   # apps:         apps internas                 → services/apps      (Fase 5)
@@ -339,6 +367,7 @@ volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
+  evebox_data:
 
 # Red interna del proyecto (interconexión de contenedores).
 # Kea queda FUERA de esta red (network_mode: host).

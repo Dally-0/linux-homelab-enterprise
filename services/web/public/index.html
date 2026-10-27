@@ -240,6 +240,12 @@
                     <span class="url">192.168.0.3 (Puerto 80)</span>
                     <span class="pill done">activo</span>
                 </a>
+                <a class="card" href="http://127.0.0.1:5636" data-port="5636" data-proto="http:">
+                    <span class="t"><span class="ico">📊</span> Alertas IDS — EveBox</span>
+                    <span class="desc">Consola web gráfica en tiempo real con estadísticas y eventos de Suricata.</span>
+                    <span class="url">Puerto 5636 (HTTP)</span>
+                    <span class="pill done">activo</span>
+                </a>
                 <a class="card" href="http://127.0.0.1:9392" data-port="9392" data-proto="http:">
                     <span class="t"><span class="ico">🔍</span> Auditoría — OpenVAS</span>
                     <span class="desc">Consola web de Greenbone para escaneo de vulnerabilidades y CVEs.</span>
@@ -300,6 +306,7 @@
                         <tr><td>TCP 1631</td><td>CUPS Print Server</td><td>Acceso no autenticado a colas de impresión</td><td>Alerta: Non-standard HTTP access</td></tr>
                         <tr><td>TCP 3000</td><td>Grafana Web UI</td><td>Búsqueda de versiones vulnerables y auth bypass</td><td>Alerta: Scanner user-agents / API probes</td></tr>
                         <tr><td>TCP 5432</td><td>PostgreSQL Database</td><td>Intentos de autenticación remota y brute force</td><td>Alerta: Database connection probes</td></tr>
+                        <tr><td>TCP 5636</td><td>EveBox IDS Dashboard</td><td>Consola gráfica de alertas e investigación de Suricata</td><td>Monitoreo: Interfaz visual de incidentes</td></tr>
                         <tr><td>TCP 8080</td><td>Roundcube Webmail</td><td>CVEs de plugins, inyección en webmail</td><td>Alerta: Web application attack patterns</td></tr>
                         <tr><td>TCP 8082</td><td>Filebrowser (Archivos)</td><td>Directory traversal, acceso sin autorización</td><td>Alerta: Path traversal signatures</td></tr>
                         <tr><td>TCP 9392</td><td>OpenVAS / Greenbone GSA</td><td>Consola de gestión de auditorías y reportes CVE</td><td>Alerta: Detección de motor de escaneo</td></tr>
