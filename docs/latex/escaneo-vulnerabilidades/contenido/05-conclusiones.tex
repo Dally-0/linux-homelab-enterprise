@@ -1,0 +1,28 @@
+% ============================================================================
+%  CONCLUSIONES
+% ============================================================================
+
+\section{Conclusiones del Ejercicio de Auditoría}
+
+El desarrollo integral de la auditoría de seguridad y escaneo de vulnerabilidades sobre la infraestructura del servidor corporativo ha permitido consolidar conclusiones técnicas y estratégicas de alto valor:
+
+\begin{enumerate}
+  \item \textbf{Efectividad del Escaneo Multicapa:} La combinación de herramientas complementarias (Nmap para la capa de transporte, OpenVAS para la identificación de fallos de configuración de red, Nikto para la capa web y Trivy para los contenedores) permitió mapear con precisión quirúrgica la superficie de ataque del sistema objetivo, demostrando que ningún escáner individual es suficiente para obtener una visión completa del estado de seguridad.
+  
+  \item \textbf{Riesgo Crítico de la Configuración por Omisión:} Los principales hallazgos de severidad alta detectados (como la exposición pública del puerto PostgreSQL en \texttt{0.0.0.0:5432} o la transmisión en texto claro en servicios web internos) no se debieron a vulnerabilidades de día cero (\textit{0-days}) en el código fuente, sino a fallos de configuración operativa y omisión de directivas de aislamiento en los manifiestos de despliegue.
+
+  \item \textbf{El Rol Transformador de la Prevención Activa (IPS):} La integración de Suricata configurado en modo IPS con \texttt{NFQUEUE} y reglas directas con acción \texttt{drop} evidenció que es posible neutralizar de forma automática ataques dirigidos (inyecciones SQL y Path Traversal) en el instante de su transmisión, cerrando la brecha temporal entre la detección del incidente y la respuesta manual de los analistas de seguridad.
+
+  \item \textbf{Validez de la Defensa en Profundidad:} Las medidas de mitigación implementadas demuestran que la seguridad no reside en un único componente defensivo. El blindaje real se alcanza cuando el firewall de kernel (\texttt{nftables}), el proxy inverso endurecido (\texttt{nginx}), el aislamiento de contenedores (Docker sin privilegios de superusuario) y el sistema de prevención de intrusos operan de manera sincronizada y redundante.
+\end{enumerate}
+
+\section{Recomendaciones para la Operación Continua}
+
+Con el fin de preservar y mejorar la postura de ciberseguridad del servidor en el tiempo, se recomienda a la organización:
+
+\begin{itemize}
+  \item \textbf{Escaneos Automatizados en Ciclos de Despliegue (DevSecOps):} Incorporar el escaneo estático de imágenes con Trivy en el flujo de integración continua, impidiendo la puesta en producción de contenedores que contengan vulnerabilidades con puntuación CVSS mayor o igual a 7.0.
+  \item \textbf{Campañas Periódicas con OpenVAS:} Programar tareas de escaneo automatizadas con Greenbone Community Edition con una frecuencia mensual o ante cualquier modificación estructural en la topología de la red.
+  \item \textbf{Monitoreo Centralizado de Alertas en EveBox:} Establecer turnos de revisión de los eventos recolectados por EveBox y configurar notificaciones automáticas ante disparos de firmas de severidad 1 (alta criticidad).
+  \item \textbf{Gestión de Parches y Actualizaciones:} Mantener una política formal de actualización de paquetes del sistema operativo base (Debian/Linux) y de las imágenes oficiales de Docker, aplicando parches de seguridad en una ventana no superior a 72 horas tras su publicación.
+\end{itemize}

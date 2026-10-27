@@ -1,0 +1,116 @@
+% ============================================================================
+%  CAPÍTULO I: ENTORNO DE PRUEBAS Y DEFINICIÓN DEL OBJETIVO
+% ============================================================================
+
+\section{Introducción al Entorno de Evaluación}
+
+La evaluación de seguridad y el análisis de vulnerabilidades constituyen una disciplina fundamental dentro de la gestión de riesgos tecnológicos modernos \citep{nist_sp800_115}. El presente informe documenta de manera exhaustiva el proceso de escaneo, identificación, categorización y mitigación de fallos de seguridad sobre la infraestructura del servidor corporativo de la organización financiera \textit{Banco Sudoers}.
+
+El ejercicio se realizó bajo la modalidad de auditoría de caja gris (\textit{Gray-Box Assessment}), donde el equipo auditor posee conocimiento preliminar del direccionamiento IP y la tipología de servicios desplegados, pero simula las técnicas de descubrimiento y vectores de ataque que ejecutaría un actor malicioso externo o interno con acceso al segmento de red local.
+
+\section{Definición del Equipo Objetivo (Target)}
+
+El equipo objetivo auditado corresponde al servidor central de operaciones e infraestructura (\texttt{dc1.sudoers.lan}), el cual consolida los servicios críticos de negocio, autenticación, almacenamiento, correo electrónico y mecanismos defensivos de detección de intrusos.
+
+\subsection{Ficha Técnica del Sistema Objetivo}
+
+En la \textbf{TABLA \ref{tab:ficha-target}} se especifican los parámetros técnicos, hardware y de red que caracterizan al host auditado durante la ventana de evaluación de seguridad.
+
+\begin{table}[H]
+\centering
+\caption{Ficha Técnica del Servidor Objetivo (Target)}
+\label{tab:ficha-target}
+\contenidoConFuente{%
+  \begin{tablaAPA}
+  \begin{tabular}{L{4.2cm}L{10.8cm}}
+  \toprule
+  \textbf{Parámetro} & \textbf{Valor / Descripción Técnica} \\
+  \midrule
+  \textbf{Nombre de Host (FQDN)} & \texttt{dc1.sudoers.lan} (Alias de red: \texttt{target-host}) \\
+  \textbf{Dirección IPv4 del Target} & \texttt{192.168.100.85} (Asignada en interfaz LAN cableada/Wi-Fi) \\
+  \textbf{Máscara de Red / Prefijo} & \texttt{255.255.255.0} (\texttt{/24}) \\
+  \textbf{Puerta de Enlace (Gateway)} & \texttt{192.168.100.1} \\
+  \textbf{Sistema Operativo Base} & GNU/Linux Debian 12 / Kali Linux Rolling (Kernel 6.x x86\_64) \\
+  \textbf{Modelo Operativo} & Arquitectura híbrida: Servicios de aplicación en contenedores Docker y motores de defensa nativos en espacio de kernel \\
+  \textbf{Rol Corporativo} & Servidor Central de Banca Digital, Servicios Intranet y Pasarela Perimetral \\
+  \textbf{Estación de Auditoría} & Estación Kali Linux dedicada (\texttt{192.168.100.50}) \\
+  \bottomrule
+  \end{tabular}
+  \end{tablaAPA}%
+}{Elaboración propia con base en el levantamiento de infraestructura.}
+\end{table}
+
+\subsection{Matriz de Servicios y Puertos Expuestos}
+
+El servidor objetivo implementa una arquitectura modular donde conviven servicios de acceso público, plataformas de administración interna y mecanismos de monitoreo. La \textbf{TABLA \ref{tab:matriz-servicios}} detalla la distribución de puertos que fueron sometidos al proceso de escaneo y análisis de vulnerabilidades.
+
+\begin{table}[H]
+\centering
+\caption{Matriz de Servicios y Puertos en Evaluación}
+\label{tab:matriz-servicios}
+\contenidoConFuente{%
+  \begin{tablaAPA}
+  \begin{tabular}{C{1.6cm}C{1.8cm}L{3.8cm}L{3.6cm}L{3.8cm}}
+  \toprule
+  \textbf{Puerto} & \textbf{Protocolo} & \textbf{Servicio / Software} & \textbf{Entorno de Ejecución} & \textbf{Propósito en la Organización} \\
+  \midrule
+  80 & TCP & Nginx Reverse Proxy & Contenedor Docker & Portal Web Financiero y Redirección \\
+  443 & TCP & Nginx TLS Server & Contenedor Docker & Acceso Seguro HTTPS Bancario \\
+  8080 & TCP & Roundcube Webmail & Contenedor Docker & Plataforma de Correo Corporativo \\
+  8082 & TCP & TinyFileManager & Contenedor Docker & Gestor Web de Archivos y Documentos \\
+  3000 & TCP & Grafana Analytics & Contenedor Docker & Tableros de Telemetría y Métricas \\
+  5432 & TCP & PostgreSQL Engine & Contenedor Docker & Base de Datos Relacional de Clientes \\
+  5636 & TCP & EveBox GUI & Contenedor Docker & Consola de Alertas IDS/IPS en Tiempo Real \\
+  9392 & TCP & Greenbone GSA & Contenedor Docker & Consola de Auditoría y Escaneo OpenVAS \\
+  22 & TCP & OpenSSH Daemon & Host Nativo Linux & Administración Remota Segura por Consola \\
+  \bottomrule
+  \end{tabular}
+  \end{tablaAPA}%
+}{Elaboración propia con base en la configuración de \texttt{docker-compose.yml} y el firewall del host.}
+\end{table}
+
+\section{Topología de Red del Escenario de Pruebas}
+
+Para garantizar la verosimilitud de la evaluación, el entorno de pruebas fue configurado en un segmento de red local conmutada donde la estación auditora y el servidor objetivo interactúan de forma directa. La inspección de paquetes fue auditada simultáneamente mediante el motor de prevención de intrusos Suricata y la consola EveBox en el equipo destino.
+
+\begin{figure}[H]
+\centering
+\caption{Diagrama de Topología del Entorno de Auditoría y Escaneo}
+\label{fig:topologia-pruebas}
+\begin{tikzpicture}[
+  node distance=1.6cm and 2.4cm,
+  box/.style={rectangle, draw=black, thick, fill=gray!10, align=center, rounded corners=3pt, minimum height=1.3cm, minimum width=3.4cm, font=\small\sffamily},
+  targetbox/.style={rectangle, draw=red!70!black, very thick, fill=red!5, align=center, rounded corners=4pt, minimum height=2.2cm, minimum width=4.8cm, font=\small\sffamily},
+  scannerbox/.style={rectangle, draw=blue!70!black, very thick, fill=blue!5, align=center, rounded corners=4pt, minimum height=2.0cm, minimum width=4.4cm, font=\small\sffamily},
+  line/.style={draw, thick, -{Latex[length=2.5mm]}},
+  dashline/.style={draw, thick, dashed, red!70!black, -{Latex[length=2.5mm]}}
+]
+  % Nodos principales
+  \node[scannerbox] (auditor) {
+    \textbf{Estación Auditora (Kali Linux)}\\
+    \footnotesize IP: \texttt{192.168.100.50}\\
+    \scriptsize Nmap, OpenVAS, Nikto, Trivy
+  };
+
+  \node[box, right=of auditor] (switch) {
+    \textbf{Switch / Router LAN}\\
+    \footnotesize Segmento: \texttt{192.168.100.0/24}\\
+    \scriptsize Gateway: \texttt{192.168.100.1}
+  };
+
+  \node[targetbox, right=of switch] (target) {
+    \textbf{Servidor Objetivo (Target)}\\
+    \footnotesize \texttt{dc1.sudoers.lan} (\texttt{192.168.100.85})\\
+    \scriptsize Nginx, PostgreSQL, Webmail, Filemanager\\
+    \scriptsize \textbf{Defensas:} Nftables + Suricata IDS/IPS
+  };
+
+  % Líneas de conexión
+  \path[line] (auditor) -- node[above, font=\scriptsize\sffamily] {Tráfico de Evaluación} (switch);
+  \path[line] (switch) -- node[above, font=\scriptsize\sffamily] {Sondas / Pruebas} (target);
+  \path[dashline] ([yshift=-0.6cm]target.west) -- node[below, font=\scriptsize\sffamily] {Alertas IDS / Drop IPS} ([yshift=-0.6cm]switch.east);
+\end{tikzpicture}
+\fuenteAPA{Elaboración propia.}
+\end{figure}
+
+El tráfico generado durante las pruebas abarcó desde escaneos pasivos y barridos SYN de bajo perfil hasta pruebas activas de inyección de sentencias SQL, enumeración forzada de directorios y evaluación de versiones en los servicios de red.

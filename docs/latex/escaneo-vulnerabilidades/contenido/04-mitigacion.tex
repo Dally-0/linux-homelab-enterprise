@@ -1,0 +1,128 @@
+% ============================================================================
+%  CAPÍTULO IV: MEDIDAS DE MITIGACIÓN Y ENDURECIMIENTO TÉCNICO
+% ============================================================================
+
+\section{Estrategia Integral de Remediación y Endurecimiento}
+
+Para resolver de manera definitiva las vulnerabilidades identificadas en el capítulo anterior, se diseñó e implementó un plan de mitigación técnica basado en el principio de defensa en profundidad (\textit{Defense in Depth}) \citep{cis_debian_2023}. A continuación se detallan las medidas aplicadas en cada nivel de la infraestructura.
+
+\section{Remediación por Vulnerabilidad Identificada}
+
+\subsection{Solución VULN-01: Aislamiento del Motor PostgreSQL en Capa de Red}
+Para neutralizar la exposición directa de la base de datos, se aplicaron dos controles complementarios:
+
+\begin{enumerate}
+  \item \textbf{Aislamiento en Docker Bridge:} Se modificó el archivo \texttt{docker-compose.yml} para remover la publicación pública del puerto \texttt{5432:5432}, sustituyéndola por la cláusula \texttt{expose: - 5432}. Con esto, el motor PostgreSQL únicamente es accesible para los contenedores que coexisten en la red interna de Docker (\texttt{homelab\_net}), quedando completamente invisible para el segmento LAN externo.
+  \item \textbf{Filtrado en Firewall Nftables:} En caso de requerirse acceso administrativo remoto para mantenimiento, se configuró una regla restrictiva en \texttt{server/nftables.conf} que vincula el puerto 5432 exclusivamente al conjunto de IPs de administradores autorizados (\texttt{@admin\_ips}):
+\end{enumerate}
+
+\begin{lstlisting}[style=terminal, caption={Regla de Filtrado para PostgreSQL en nftables.conf}, label={lst:mitigacion-postgres}]
+# Permitir acceso al motor PostgreSQL UNICAMENTE desde estaciones admin
+tcp dport 5432 ip saddr @admin_ips accept comment "Postgres solo admins"
+tcp dport 5432 drop comment "Bloqueo por defecto de Postgres para la LAN"
+\end{lstlisting}
+
+\subsection{Solución VULN-02: Cifrado TLS Obligatorio y Terminación SSL en Nginx}
+Para erradicar la transmisión de credenciales y cookies de sesión en texto claro:
+
+\begin{enumerate}
+  \item Se centralizó la terminación criptográfica en el proxy inverso Nginx, configurando certificados TLS modernos con protocolos TLSv1.2 y TLSv1.3 y deshabilitando suites de cifrado obsoletas o vulnerables (RC4, 3DES, CBC).
+  \item Se implementó una regla de redirección automática en el bloque del puerto 80 hacia el puerto seguro 443 (\texttt{return 301 https://\$host\$request\_uri;}).
+  \item Los servicios internos (Roundcube Webmail en 8080, TinyFileManager en 8082, Grafana en 3000 y EveBox en 5636) se enrutan de forma segura a través de subdominios o rutas protegidas bajo HTTPS.
+\end{enumerate}
+
+\subsection{Solución VULN-03: Endurecimiento de Cabeceras Web y Ocultación de Banners}
+En el archivo de configuración \texttt{services/web/nginx.conf} se añadieron las siguientes directivas de endurecimiento recomendadas por OWASP:
+
+\begin{lstlisting}[style=terminal, caption={Cabeceras de Endurecimiento Web Configuradas en nginx.conf}, label={lst:mitigacion-headers}]
+# Ocultar version exacta de Nginx en cabeceras y paginas de error
+server_tokens off;
+
+# Prevenir ataques de Clickjacking impidiendo el renderizado en iframes
+add_header X-Frame-Options "DENY" always;
+
+# Prevenir que el navegador interprete archivos con tipos MIME erroneos
+add_header X-Content-Type-Options "nosniff" always;
+
+# Habilitar filtro anti-XSS integrado en navegadores heredados
+add_header X-XSS-Protection "1; mode=block" always;
+
+# Forzar navegacion exclusiva por HTTPS durante un anio (HSTS)
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+# Bloqueo de escaneres automatizados maliciosos identificados por User-Agent
+if ($http_user_agent ~* (nikto|sqlmap|gobuster|dirbuster|wpscan|masscan)) {
+    return 403;
+}
+\end{lstlisting}
+
+\subsection{Solución VULN-04: Control de Acceso Perimetral para Paneles de Telemetría}
+Para proteger las consolas de métricas y auditoría (Grafana y EveBox):
+\begin{itemize}
+  \item Se configuró en el firewall del host anfitrión una restricción estricta de acceso al puerto 5636 de EveBox, de modo que los eventos y alertas del IDS/IPS no puedan ser consultados por actores no autorizados dentro de la red.
+  \item Se forzó el uso de contraseñas de alta entropía (mínimo 16 caracteres alfanuméricos con caracteres especiales) y autenticación basada en cuentas individuales con privilegios de solo lectura (\textit{Role-Based Access Control}, RBAC).
+\end{itemize}
+
+\subsection{Solución VULN-05: Fortalecimiento y Aislamiento de Contenedores Docker}
+Siguiendo las recomendaciones del estándar CIS Docker Benchmark \citep{cis_docker_2023}:
+\begin{itemize}
+  \item \textbf{Usuarios no privilegiados:} Los contenedores de producción fueron configurados para ejecutar sus procesos con identificadores de usuario sin privilegios (\texttt{USER 1000:1000}), evitando la ejecución nativa como \texttt{root}.
+  \item \textbf{Desacoplamiento del Socket Docker:} Se eliminó el montaje de \texttt{/var/run/docker.sock} en todos los contenedores con interfaz web o exposición hacia la red.
+  \item \textbf{Sistemas de archivos de solo lectura:} Se configuró la bandera \texttt{read\_only: true} en contenedores estáticos, impidiendo que una potencial carga útil maliciosa pueda escribir binarios o scripts en el disco del contenedor.
+\end{itemize}
+
+\subsection{Solución VULN-06: Mitigación Activa contra DoS y Slowloris}
+Para prevenir el agotamiento de recursos y denegaciones de servicio:
+
+\begin{enumerate}
+  \item \textbf{Timeouts Cortos en Nginx:} Se configuraron tiempos de espera estrictos para la recepción de cabeceras y cuerpos de peticiones HTTP, cerrando automáticamente conexiones que transmitan datos de forma deliberadamente pausada:
+\begin{lstlisting}[style=terminal, caption={Directivas Anti-Slowloris y Limitacion de Conexiones en Nginx}, label={lst:mitigacion-slowloris}]
+client_body_timeout 5s;
+client_header_timeout 5s;
+keepalive_timeout 15s;
+send_timeout 5s;
+
+# Limitacion de tasa de peticiones por IP (20 solicitudes por segundo con rafaga)
+limit_req_zone $binary_remote_addr zone=req_limit:10m rate=20r/s;
+limit_req zone=req_limit burst=40 nodelay;
+
+# Limitacion de conexiones simultaneas por direccion IP
+limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+limit_conn conn_limit 20;
+\end{lstlisting}
+
+  \item \textbf{Prevención Activa de Intrusos con Suricata IPS (NFQUEUE):} Se activaron reglas de intercepción en línea en Suricata con acción \texttt{drop}, bloqueando de manera instantánea el tráfico que contenga firmas de inyección SQL o barridos de vulnerabilidades antes de que lleguen a la aplicación web:
+\begin{lstlisting}[style=terminal, caption={Reglas de Prevencion Activa en homelab.rules}, label={lst:reglas-ips}]
+# Bloqueo inmediato de Inyeccion SQL (UNION SELECT)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Intento SQLi UNION SELECT"; flow:to_server,established; content:"UNION"; nocase; content:"SELECT"; nocase; classtype:web-application-attack; sid:1000001; rev:1;)
+
+# Bloqueo inmediato de Path Traversal (/etc/passwd)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Path Traversal /etc/passwd"; flow:to_server,established; content:"etc/passwd"; nocase; classtype:web-application-attack; sid:1000003; rev:1;)
+\end{lstlisting}
+\end{enumerate}
+
+\section{Matriz Comparativa: Estado Inicial vs Estado Mitigado}
+
+La \textbf{TABLA \ref{tab:comparativa-mitigacion}} resume el impacto de las soluciones técnicas implementadas, evidenciando la reducción drástica de la superficie de ataque y el riesgo global del sistema objetivo.
+
+\begin{table}[H]
+\centering
+\caption{Comparativa Técnica: Estado Inicial (Vulnerable) vs Estado Mitigado}
+\label{tab:comparativa-mitigacion}
+\contenidoConFuente{%
+  \begin{tablaAPA}
+  \begin{tabular}{L{3.4cm}L{5.8cm}L{5.8cm}}
+  \toprule
+  \textbf{Aspecto de Seguridad} & \textbf{Estado Inicial (Vulnerable)} & \textbf{Estado Mitigado (Seguro)} \\
+  \midrule
+  \textbf{Base de Datos (5432)} & Expuesta a \texttt{0.0.0.0} en toda la LAN. & Confinada a red interna Docker; solo accesible por IPs administradoras. \\
+  \textbf{Cifrado en Tránsito} & Tráfico HTTP plano en puertos 80, 8080, 8082, 3000, 5636. & Redirección obligatoria a HTTPS/TLS 1.3 con suites criptográficas seguras. \\
+  \textbf{Cabeceras HTTP} & Ausencia de protecciones anti-Clickjacking, CSP y HSTS. & Cabeceras OWASP estrictas activas; divulgación de versión desactivada. \\
+  \textbf{Escáneres Maliciosos} & Respuesta normal a herramientas automatizadas (Nikto, SQLMap). & Bloqueo directo por User-Agent (HTTP 403) y neutralización por IPS. \\
+  \textbf{Resiliencia DoS} & Susceptible a hilos bloqueados por conexiones lentas (Slowloris). & Timeouts estrictos (5s) y limitación de tasa (\texttt{limit\_req} / \texttt{limit\_conn}). \\
+  \textbf{Inyecciones Web} & La petición llegaba directamente al backend de la aplicación. & Descarte inmediato de paquetes (\texttt{drop}) mediante Suricata IPS / NFQUEUE. \\
+  \bottomrule
+  \end{tabular}
+  \end{tablaAPA}%
+}{Elaboración propia.}
+\end{table}

@@ -1,0 +1,94 @@
+% ============================================================================
+%  CAPÍTULO II: HERRAMIENTAS UTILIZADAS Y METODOLOGÍA DE EVALUACIÓN
+% ============================================================================
+
+\section{Arsenal Tecnológico y Herramientas Utilizadas}
+
+Para llevar a cabo una auditoría integral que cubra tanto la capa de red como la capa de aplicaciones web y la seguridad de los contenedores, se seleccionó un conjunto de herramientas de estándar internacional reconocidas en la industria de la ciberseguridad \citep{nist_sp800_115}.
+
+\subsection{Nmap (Network Mapper)}
+\textbf{Nmap} es la herramienta de referencia mundial para la exploración de redes, mapeo de topologías y auditoría de seguridad perimetral \citep{lyon_nmap_2009}. En esta evaluación se empleó para:
+\begin{itemize}
+  \item Descubrimiento activo de hosts mediante sondas ARP e ICMP combinadas.
+  \item Barrido de puertos TCP mediante la técnica de escaneo sigiloso SYN (\textit{Stealth Scan} con flag \texttt{-sS}).
+  \item Identificación precisa de versiones y \textit{banners} de los servicios expuestos (\texttt{-sV}).
+  \item Ejecución automatizada de scripts NSE (\textit{Nmap Scripting Engine}) especializados en auditoría y explotación controlada de vulnerabilidades (\texttt{--script vuln}).
+\end{itemize}
+
+\subsection{Greenbone Community Edition (OpenVAS)}
+\textbf{OpenVAS} (\textit{Open Vulnerability Assessment System}), integrado en la plataforma \textit{Greenbone Community Edition}, es un escáner de vulnerabilidades integral de nivel corporativo \citep{greenbone_gvm_2024}. Su motor de auditoría ejecuta miles de pruebas de vulnerabilidad de red (\textit{Network Vulnerability Tests}, NVTs) actualizadas diariamente contra bases de datos CVE y estándares SCAP. Se utilizó para:
+\begin{itemize}
+  \item Escanear en profundidad los servicios web y bases de datos expuestas en el servidor.
+  \item Clasificar hallazgos de acuerdo con el estándar CVSS (\textit{Common Vulnerability Scoring System}).
+  \item Identificar fallos de configuración en protocolos TLS, algoritmos criptográficos débiles y versiones desactualizadas de paquetes en el servidor.
+\end{itemize}
+
+\subsection{Trivy (Aqua Security)}
+\textbf{Trivy} es un escáner integral de seguridad especializado en entornos de contenedores Docker, sistemas de archivos e infraestructura como código \citep{aqua_trivy_2024}. Se utilizó para evaluar directamente las imágenes de Docker que componen el entorno de servicios de la organización (PostgreSQL, Roundcube, Nginx, TinyFileManager), detectando librerías empaquetadas con vulnerabilidades conocidas (CVE) antes y durante su ejecución.
+
+\subsection{Nikto y SQLMap}
+Para complementar el análisis web en la capa de aplicación (Capa 7), se utilizaron:
+\begin{itemize}
+  \item \textbf{Nikto Web Scanner:} Escáner de servidores web que identifica más de 6700 archivos y programas potencialmente peligrosos, versiones desactualizadas de servidores y cabeceras HTTP inseguras.
+  \item \textbf{SQLMap:} Herramienta especializada en la detección automatizada de fallos de inyección SQL en parámetros de formularios y cabeceras de consulta.
+\end{itemize}
+
+\subsection{Suricata IDS/IPS y Consola EveBox}
+Como elemento distintivo del entorno defensivo implementado en el host objetivo, se mantuvo activo el motor de prevención de intrusos \textbf{Suricata 7.0} acoplado a la consola gráfica de eventos \textbf{EveBox} \citep{oisf_suricata_2024}. Esto permitió validar no solo qué vulnerabilidades posee el servidor, sino verificar en tiempo real si los intentos de escaneo y explotación eran detectados y mitigados activamente por el sistema de defensa perimetral.
+
+\begin{table}[H]
+\centering
+\caption{Resumen del Arsenal de Auditoría y Propósito Operativo}
+\label{tab:arsenal-herramientas}
+\contenidoConFuente{%
+  \begin{tablaAPA}
+  \begin{tabular}{L{3.2cm}L{3.8cm}L{4.2cm}L{3.8cm}}
+  \toprule
+  \textbf{Herramienta} & \textbf{Capa de Evaluación} & \textbf{Alcance Operativo} & \textbf{Tipo de Análisis} \\
+  \midrule
+  \textbf{Nmap 7.94+} & Capa de Transporte / Red & Detección de puertos, OS fingerprinting y banners & Activo no intrusivo / NSE vuln \\
+  \textbf{OpenVAS 24.10} & Capa de Servicios / Red & Escaneo de vulnerabilidades con feeds NVT/CVE & Auditoría profunda con puntaje CVSS \\
+  \textbf{Trivy 0.50+} & Capa de Contenedores & Análisis de imágenes Docker y dependencias SO & Auditoría estática de contenedores (SAST) \\
+  \textbf{Nikto 2.5} & Capa de Aplicación (HTTP) & Verificación de cabeceras, archivos sensibles y SSL & Auditoría dinámica web (DAST) \\
+  \textbf{SQLMap 1.8} & Capa de Aplicación (Datos) & Detección y explotación de fallos de inyección SQL & DAST enfocado a bases de datos \\
+  \textbf{Suricata + EveBox} & Capa de Telemetría Defensiva & Detección de firmas y bloqueo IPS con NFQUEUE & Monitoreo en tiempo real de los escaneos \\
+  \bottomrule
+  \end{tabular}
+  \end{tablaAPA}%
+}{Elaboración propia.}
+\end{table}
+
+\section{Metodología de Evaluación y Flujo de Trabajo}
+
+La auditoría se estructuró siguiendo los lineamientos de la guía técnica NIST SP 800-115 \citep{nist_sp800_115}, dividida en cuatro fases secuenciales:
+
+\begin{enumerate}
+  \item \textbf{Fase 1: Reconocimiento y Mapeo de Superficie de Ataque:} Identificación de la presencia del host en el segmento \texttt{192.168.100.0/24} mediante barridos ARP y sondeos TCP SYN rápidos con Nmap.
+  \item \textbf{Fase 2: Enumeración Detallada de Servicios y Banners:} Escaneo de los 65535 puertos TCP, extracción de versiones de software de los demonios escuchando y ejecución de scripts de análisis criptográfico y de cabeceras.
+  \item \textbf{Fase 3: Escaneo y Catalogación de Vulnerabilidades:} Ejecución de tareas de escaneo con Greenbone/OpenVAS contra la dirección IP objetivo, complementado con auditorías directas de imágenes Docker con Trivy y análisis web con Nikto.
+  \item \textbf{Fase 4: Verificación de Detección Defensiva y Contramedidas:} Inspección de las alertas generadas en EveBox/Suricata para comprobar la respuesta del servidor ante las sondas maliciosas y diseño de la estrategia de mitigación técnica.
+\end{enumerate}
+
+\section{Comandos Ejecutados Durante la Auditoría}
+
+A continuación se presentan los comandos representativos ejecutados desde la estación auditora Kali Linux (\texttt{192.168.100.50}) contra el objetivo (\texttt{192.168.100.85}):
+
+\begin{lstlisting}[style=terminal, caption={Comandos Principales de Escaneo Ejecutados en Kali Linux}, label={lst:comandos-escaneo}]
+# 1. Reconocimiento y deteccion de puertos con versiones y scripts base
+nmap -sS -sV -sC -p- -T4 --open -oN nmap_full_target.txt 192.168.100.85
+
+# 2. Escaneo especializado de vulnerabilidades mediante Nmap NSE
+nmap -p 80,443,3000,5432,5636,8080,8082 --script vuln -sV 192.168.100.85
+
+# 3. Auditoria de configuracion y cabeceras HTTP con Nikto
+nikto -h http://192.168.100.85 -output nikto_report.txt
+
+# 4. Auditoria de vulnerabilidades en imagenes Docker con Trivy
+trivy image postgres:16-alpine
+trivy image nginx:alpine
+
+# 5. Lanzamiento y gestion del escaner corporativo OpenVAS
+cd ~/linux-homelab-enterprise/services/openvas
+sudo bash run.sh start
+sudo bash run.sh status
+\end{lstlisting}

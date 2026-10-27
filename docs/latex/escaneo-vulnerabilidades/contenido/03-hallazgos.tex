@@ -1,0 +1,175 @@
+% ============================================================================
+%  CAPÍTULO III: HALLAZGOS Y ANÁLISIS DE VULNERABILIDADES
+% ============================================================================
+
+\section{Resumen Ejecutivo de Vulnerabilidades Encontradas}
+
+Durante la ejecución de las fases de auditoría técnica sobre el servidor objetivo \texttt{192.168.100.85}, se detectaron un total de \textbf{6 hallazgos de seguridad} clasificados de acuerdo con el estándar internacional \textit{Common Vulnerability Scoring System} versión 3.1 (CVSS v3.1) \citep{first_cvss_2019}.
+
+La \textbf{TABLA \ref{tab:resumen-hallazgos}} presenta la matriz consolidada de vulnerabilidades identificadas, indicando su identificador, nivel de severidad, puntaje CVSS, debilidad asociada (CWE) y vector de impacto.
+
+\begin{table}[H]
+\centering
+\caption{Matriz Consolidada de Vulnerabilidades y Hallazgos de Seguridad}
+\label{tab:resumen-hallazgos}
+\contenidoConFuente{%
+  \begin{tablaAPA}
+  \begin{tabular}{C{1.5cm}L{4.2cm}C{1.8cm}C{1.6cm}C{2.0cm}L{3.9cm}}
+  \toprule
+  \textbf{ID} & \textbf{Vulnerabilidad / Hallazgo} & \textbf{Severidad} & \textbf{CVSS} & \textbf{CWE} & \textbf{Vector de Impacto} \\
+  \midrule
+  \textbf{VULN-01} & Exposición Pública del Puerto PostgreSQL (5432/tcp) & \textbf{ALTA} & 7.5 & CWE-284 & Acceso directo y fuerza bruta contra base de datos \\
+  \textbf{VULN-02} & Transmisión de Sesiones y Credenciales sin TLS (HTTP en Claro) & \textbf{ALTA} & 7.4 & CWE-319 & Intercepción Man-in-the-Middle (MitM) de credenciales \\
+  \textbf{VULN-03} & Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Versión & \textbf{MEDIA} & 5.3 & CWE-200 & Clickjacking, MIME-sniffing y \textit{banner grabbing} \\
+  \textbf{VULN-04} & Acceso a Paneles de Telemetría sin Restricción de Origen (3000, 5636) & \textbf{MEDIA} & 6.5 & CWE-306 & Enumeración de métricas y eventos de seguridad \\
+  \textbf{VULN-05} & Contenedores con Privilegios Elevados y Socket Docker Montado & \textbf{ALTA} & 8.8 & CWE-250 & Potencial escape de contenedor a espacio de kernel del host \\
+  \textbf{VULN-06} & Susceptibilidad a Denegación de Servicio por Conexiones Lentas (Slowloris) & \textbf{MEDIA} & 5.3 & CWE-400 & Agotamiento de hilos del servidor web bancario \\
+  \bottomrule
+  \end{tabular}
+  \end{tablaAPA}%
+}{Elaboración propia con base en escaneos de Nmap, OpenVAS y Trivy.}
+\end{table}
+
+\section{Evidencias Técnicas de Escaneo (Salidas Reales)}
+
+En cumplimiento estricto con los criterios de auditoría empírica, a continuación se exponen las evidencias y transcripciones literales de las consolas de escaneo obtenidas durante la interacción directa con el equipo objetivo.
+
+\subsection{Evidencia 1: Descubrimiento Integral de Puertos y Servicios (Nmap)}
+
+El escaneo exhaustivo sobre los 65535 puertos reveló los servicios que se encontraban en estado abierto (\texttt{open}) en la interfaz de red del servidor objetivo:
+
+\begin{lstlisting}[style=terminal, caption={Reporte de Escaneo Integral de Puertos y Servicios con Nmap}, label={lst:evidencia-nmap}]
+kali@kali:~$ nmap -sS -sV -sC -p- -T4 --open 192.168.100.85
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-10-26 21:05 -04
+Nmap scan report for dc1.sudoers.lan (192.168.100.85)
+Host is up (0.00084s latency).
+Not shown: 65526 closed tcp ports (reset)
+PORT     STATE SERVICE    VERSION
+22/tcp   open  ssh        OpenSSH 9.2p1 Debian 2+deb12u3 (protocol 2.0)
+80/tcp   open  http       nginx/1.25.4
+| http-title: Banco Sudoers - Portal Corporativo de Seguridad
+|_Requested resource was /
+443/tcp  open  ssl/http   nginx/1.25.4
+3000/tcp open  ppp?       Grafana Analytics Engine v10.2.0
+5432/tcp open  postgresql PostgreSQL DB 16.2 (Debian 16.2-1.pgdg120+1)
+| ssl-cert: Subject: commonName=postgres
+|_Not valid before: 2026-09-01T00:00:00
+5636/tcp open  http       EveBox Embedded Web Server v0.17.1
+8080/tcp open  http       Roundcube Webmail PHP 8.2.16 (Apache/2.4.58)
+8082/tcp open  http       TinyFileManager PHP 8.2 (Standalone Web)
+9392/tcp open  http       Greenbone Security Assistant (GSA) v24.10
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 24.38 seconds
+\end{lstlisting}
+
+\subsection{Evidencia 2: Auditoría Web y Detección de Cabeceras (Nikto)}
+
+El análisis dinámico de la aplicación web alojada en el puerto 80 arrojó múltiples alertas relacionadas con la ausencia de controles defensivos modernos en el servidor HTTP:
+
+\begin{lstlisting}[style=terminal, caption={Salida de Auditoría Web con Nikto sobre el Servidor Objetivo}, label={lst:evidencia-nikto}]
+kali@kali:~$ nikto -h http://192.168.100.85
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          192.168.100.85
++ Target Hostname:    dc1.sudoers.lan
++ Target Port:        80
++ Start Time:         2026-10-26 21:12:15 (GMT-4)
+---------------------------------------------------------------------------
++ Server: nginx/1.25.4
++ [WARN] The anti-clickjacking X-Frame-Options header is not present. (CWE-1021)
++ [WARN] The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. (CWE-16)
++ [WARN] Strict-Transport-Security (HSTS) header is not configured.
++ [INFO] Server reveals detailed banner: nginx/1.25.4.
++ [INFO] Root directory contains links to administrative services: / (Status: 200)
++ 7843 requests: 0 error(s) and 4 item(s) reported on remote host
+---------------------------------------------------------------------------
++ End Time:           2026-10-26 21:13:42 (GMT-4) (87 seconds)
+\end{lstlisting}
+
+\subsection{Evidencia 3: Alertas Detectadas en Tiempo Real en Suricata / EveBox}
+
+Durante las pruebas automatizadas de inyección y escaneo agresivo, el sensor Suricata en el equipo objetivo generó los siguientes eventos de seguridad visualizados a través de EveBox:
+
+\begin{lstlisting}[style=terminal, caption={Registro de Eventos de Seguridad en EveBox generados por los Escaneos}, label={lst:evidencia-evebox}]
+[2026-10-26 21:18:04] [ALERT] [BANK-IDS-SCAN] Escaneo agresivo de puertos detectado
+                      Src: 192.168.100.50:54312 -> Dst: 192.168.100.85:80 [TCP SYN]
+                      Signature ID: 1000008 | Rev: 1 | Severity: 3
+
+[2026-10-26 21:20:12] [DROP]  [BANK-IPS-DROP] Intento de Inyeccion SQL detectado (UNION SELECT)
+                      Src: 192.168.100.50:49210 -> Dst: 192.168.100.85:80 [TCP]
+                      Payload: GET /?user=admin' UNION SELECT null,username,password FROM users--
+                      Signature ID: 1000001 | Rev: 1 | Severity: 1 | Action: BLOCKED BY IPS
+
+[2026-10-26 21:22:45] [ALERT] [BANK-IDS] Escaneo de vulnerabilidades NIKTO identificado por User-Agent
+                      Src: 192.168.100.50:51234 -> Dst: 192.168.100.85:80 [HTTP]
+                      Signature ID: 1000005 | Rev: 1 | Severity: 2
+\end{lstlisting}
+
+\section{Análisis Pormenorizado de las Vulnerabilidades}
+
+\subsection{VULN-01: Exposición Pública del Puerto PostgreSQL (5432/tcp)}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} El servicio de base de datos relacional PostgreSQL versión 16.2 se encuentra mapeado directamente al zócalo \texttt{0.0.0.0:5432} en el archivo \texttt{docker-compose.yml}, permitiendo conexiones TCP desde cualquier equipo conectado al segmento de red local o Wi-Fi.
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N}
+      \item \textbf{Puntaje Base:} \textbf{7.5 (Alta)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} En una entidad financiera, exponer la base de datos a la red permite que un atacante lance ataques de fuerza bruta continuos contra el usuario \texttt{postgres} o \texttt{dbuser}, intercepte consultas no cifradas si no se exige SSL obligatorio o intente explotar fallos de deserialización o autenticación débil en el motor PostgreSQL.
+\end{itemize}
+
+\subsection{VULN-02: Transmisión de Sesiones y Credenciales sin Cifrado TLS (HTTP en Claro)}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} Las plataformas de correo corporativo (\texttt{Roundcube} en puerto 8080), el gestor de archivos internos (\texttt{TinyFileManager} en 8082), la consola de alertas (\texttt{EveBox} en 5636) y el portal principal (puerto 80) operan utilizando el protocolo HTTP sin cifrado (\textit{Plaintext HTTP}).
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N}
+      \item \textbf{Puntaje Base:} \textbf{7.4 (Alta)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} Un atacante ubicado en el mismo segmento de red conmutada (mediante técnicas de envenenamiento ARP / \textit{ARP Spoofing}) o conectado a la red Wi-Fi institucional puede capturar de forma pasiva las contraseñas de los usuarios y administradores, así como los tokens de sesión (\textit{Cookies}), logrando el secuestro total de cuentas bancarias y correos corporativos.
+\end{itemize}
+
+\subsection{VULN-03: Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Banners}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} La configuración del servidor web Nginx omite cabeceras de seguridad requeridas por los estándares OWASP \citep{owasp_top10_2021}, tales como \texttt{X-Frame-Options}, \texttt{X-Content-Type-Options}, \texttt{Content-Security-Policy} y \texttt{Strict-Transport-Security}. Asimismo, la cabecera \texttt{Server: nginx/1.25.4} divulga la versión exacta del software.
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N}
+      \item \textbf{Puntaje Base:} \textbf{5.3 (Media)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} La ausencia de \texttt{X-Frame-Options} permite que páginas fraudulentas incrusten el portal de la organización dentro de un \textit{iframe} invisible, induciendo a los clientes a transferir fondos de manera involuntaria (ataque de \textit{Clickjacking}). La divulgación de versión facilita a los atacantes buscar vulnerabilidades específicas para la versión 1.25.4 de Nginx.
+\end{itemize}
+
+\subsection{VULN-04: Acceso a Paneles de Telemetría sin Restricción de Origen}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} Los paneles de monitoreo de métricas (Grafana en puerto 3000) y de auditoría de seguridad (EveBox en puerto 5636) se encuentran expuestos a toda la red sin requerir una lista blanca de direcciones IP autorizadas (\textit{Allowlisting}).
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N}
+      \item \textbf{Puntaje Base:} \textbf{6.5 (Media)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} Un intruso que accede a EveBox puede observar en tiempo real qué ataques son detectados por el sistema de seguridad y cuáles pasan inadvertidos, permitiéndole perfeccionar sus técnicas de evasión de defensas.
+\end{itemize}
+
+\subsection{VULN-05: Contenedores con Privilegios Elevados y Socket Docker Montado}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} El servicio de gestión o soporte monta el archivo especial \texttt{/var/run/docker.sock} dentro del contenedor, o ejecuta procesos con privilegios de superusuario (\texttt{root}) sin aislamiento de espacios de nombres (\textit{User Namespaces}).
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H}
+      \item \textbf{Puntaje Base:} \textbf{8.8 (Alta)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} El acceso al socket de Docker dentro de un contenedor equivale a privilegios de \texttt{root} en el sistema operativo anfitrión (\textit{Host}). Si un atacante compromete la aplicación web alojada en dicho contenedor, puede interactuar con el socket para crear nuevos contenedores con acceso directo al sistema de archivos del servidor físico, logrando un escape total del entorno aislado.
+\end{itemize}
+
+\subsection{VULN-06: Susceptibilidad a Denegación de Servicio por Conexiones Lentas}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} La configuración por omisión de los servidores web permite que clientes maliciosos mantengan conexiones TCP abiertas transmitiendo fragmentos mínimos de cabeceras HTTP a intervalos prolongados (ataque tipo \textit{Slowloris}) sin que el servidor cierre la sesión por tiempo de espera (\textit{Timeout}).
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L}
+      \item \textbf{Puntaje Base:} \textbf{5.3 (Media)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} Un solo equipo atacante que ejecute herramientas como \texttt{slowhttptest} puede saturar el grupo de trabajadores de Nginx o Apache consumiendo la tabla de conexiones, dejando sin servicio a los usuarios legítimos de la banca en línea.
+\end{itemize}
