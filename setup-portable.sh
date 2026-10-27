@@ -19,6 +19,7 @@ CLR_CYAN="\033[36m"
 
 log()  { printf "\n${CLR_BOLD}${CLR_CYAN}==> %s${CLR_RESET}\n" "$*"; }
 ok()   { printf "    ${CLR_GREEN}✔${CLR_RESET} %s\n" "$*"; }
+info() { printf "    %s\n" "$*"; }
 warn() { printf "    ${CLR_YELLOW}! %s${CLR_RESET}\n" "$*"; }
 die()  { printf "\n${CLR_RED}ERROR: %s${CLR_RESET}\n" "$*" >&2; exit 1; }
 
