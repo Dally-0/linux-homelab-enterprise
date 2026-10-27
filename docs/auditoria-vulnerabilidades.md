@@ -74,27 +74,74 @@ OpenVAS audita vulnerabilidades a nivel de red, sistema operativo y aplicaciones
 
 ---
 
-## 4. Detección en Tiempo Real con Suricata (IDS)
+## 4. Detección y Prevención en Tiempo Real con Suricata (IDS vs IPS)
 
-Mientras el escáner de vulnerabilidades (OpenVAS o Nmap) evalúa los puertos, el IDS **Suricata** en el servidor inspecciona el tráfico en la placa de red y registra los ataques o sondeos:
+El servidor cuenta con **Suricata 7** configurado para operar en dos modalidades según lo que quieras demostrar ante el docente:
 
-### En el Servidor (Terminal de monitoreo):
+### A. Alternar entre Modo IDS y Modo IPS
+El script [server/suricata/ips-toggle.sh](file:///f:/tareas/seguridadInformatica1/linux-homelab-enterprise/server/suricata/ips-toggle.sh) permite alternar el comportamiento del servidor en caliente:
+
+```bash
+# 1. Poner Suricata en MODO IDS (Detección Pasiva con AF_PACKET)
+# El escaneo o ataque se detecta y se genera la alerta, pero el tráfico NO se corta
+sudo bash server/suricata/ips-toggle.sh --ids
+
+# 2. Poner Suricata en MODO IPS (Prevención Activa en Línea con NFQUEUE + nftables)
+# Cuando se detecta una firma con acción 'drop', el paquete se DESCARTA en el kernel en tiempo real
+sudo bash server/suricata/ips-toggle.sh --ips
+
+# 3. Ver estado actual (si está en modo IDS o IPS) y últimas alertas
+bash server/suricata/ips-toggle.sh --status
+```
+
+### B. Monitoreo de Alertas durante el Escaneo
+Mientras lanzás OpenVAS o Nmap contra el servidor:
 ```bash
 # Ver alertas inmediatas de Suricata:
 sudo tail -f /var/log/suricata/fast.log
 
 # O analizar eventos estructurados JSON con jq:
-sudo tail -f /var/log/suricata/eve.json | jq 'select(.event_type=="alert") | {timestamp: .timestamp, src: .src_ip, alerta: .alert.signature, categoria: .alert.category}'
+sudo tail -f /var/log/suricata/eve.json | jq 'select(.event_type=="alert") | {timestamp: .timestamp, src: .src_ip, alerta: .alert.signature, accion: .alert.action}'
 ```
 
-### Qué alertas se disparan durante el escaneo:
-- Alertas de barrido de puertos: `ET SCAN Potential Nmap Scan`.
-- Alertas de sondeo a bases de datos: `ET SCAN Suspicious inbound to PostgreSQL port 5432`.
-- Alertas de pruebas de vulnerabilidades web en Roundcube o Nginx.
+### C. Firmas específicas añadidas en esta rama:
+En [server/suricata/rules/homelab.rules](file:///f:/tareas/seguridadInformatica1/linux-homelab-enterprise/server/suricata/rules/homelab.rules) se configuraron reglas para:
+- `[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: OpenVAS / Greenbone detectado`
+- `[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: Nikto Web Scanner detectado`
+- `[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: Nmap NSE detectado`
+- `[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Inyeccion SQL interceptada y descartada`
+- `[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Directory Traversal interceptado y descartado`
+
+### D. Batería de pruebas automatizadas
+Para demostrar rápidamente que el IDS detecta y el IPS bloquea sin esperar a OpenVAS:
+```bash
+sudo bash server/suricata/test-ids-ips.sh
+```
 
 ---
 
-## 5. Pruebas Complementarias y Ligeras
+## 5. Otro Sistema de Prevención (Host IPS): Fail2ban
+
+Si el docente pide **otro programa** además de Suricata para prevención de intrusiones, la opción complementaria por excelencia en Linux es **Fail2ban**:
+- **Suricata:** Es un **NIDS / NIPS** (inspecciona paquetes y tráfico de red en bruto a nivel de capas 3, 4 y 7).
+- **Fail2ban:** Es un **HIPS** (Host Intrusion Prevention System) que analiza bitácoras de autenticación y bloquea dinámicamente direcciones IP infractoras en el firewall `nftables`.
+
+### Cómo instalarlo y probarlo en 2 pasos:
+```bash
+# 1. Instalar Fail2ban en el servidor Debian:
+sudo apt install -y fail2ban
+
+# 2. Habilitar la protección para SSH (puerto 22):
+sudo systemctl enable --now fail2ban
+```
+Si alguien intenta 3 o 5 contraseñas erróneas por SSH, Fail2ban inserta una regla de bloqueo temporal (`drop`) en `nftables` y podés mostrar el bloqueo con:
+```bash
+sudo fail2ban-client status sshd
+sudo nft list ruleset
+```
+---
+
+## 6. Pruebas Complementarias y Ligeras
 
 Si en el aula no se dispone de suficiente memoria RAM para levantar OpenVAS completo, podés utilizar estas herramientas complementarias equivalentes:
 
@@ -124,7 +171,7 @@ nikto -h http://<IP_DEL_SERVIDOR>:8080/
 
 ---
 
-## 6. Resumen de la Demostración para la Exposición
+## 7. Resumen de la Demostración para la Exposición
 
 1. **Mostrar la arquitectura:** Explicar cómo cada servicio corre aislado en Docker y expone su puerto de red.
 2. **Abrir el portal web:** Navegar a `http://<IP_DEL_SERVIDOR>` para demostrar que todo se adapta dinámicamente a la IP asignada.
