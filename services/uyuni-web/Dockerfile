@@ -1,11 +1,14 @@
 # Multi-stage build para la web Uyuni Way (React + Vite)
-# Etapa 1: Compilación de los assets estáticos
-FROM node:20-alpine AS builder
+# Etapa 1: Compilación de assets con Node en Debian Slim (compatible con glibc/rollup)
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
+ENV VITE_SUPABASE_URL=https://placeholder.supabase.co
+ENV VITE_SUPABASE_ANON_KEY=placeholder-key
+
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 COPY . .
 RUN npm run build
