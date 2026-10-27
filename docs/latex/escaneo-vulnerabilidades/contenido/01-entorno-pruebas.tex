@@ -51,23 +51,30 @@ El servidor objetivo implementa una arquitectura modular donde conviven servicio
 \label{tab:matriz-servicios}
 \contenidoConFuente{%
   \begin{tablaAPA}
-  \begin{tabular}{C{1.6cm}C{1.8cm}L{3.8cm}L{3.6cm}L{3.8cm}}
+  \begin{tabular}{C{1.5cm}C{1.6cm}L{3.6cm}L{3.4cm}L{4.7cm}}
   \toprule
   \textbf{Puerto} & \textbf{Protocolo} & \textbf{Servicio / Software} & \textbf{Entorno de Ejecución} & \textbf{Propósito en la Organización} \\
   \midrule
-  80 & TCP & Nginx Reverse Proxy & Contenedor Docker & Portal Web Financiero y Redirección \\
-  443 & TCP & Nginx TLS Server & Contenedor Docker & Acceso Seguro HTTPS Bancario \\
-  8080 & TCP & Roundcube Webmail & Contenedor Docker & Plataforma de Correo Corporativo \\
-  8082 & TCP & TinyFileManager & Contenedor Docker & Gestor Web de Archivos y Documentos \\
+  22 & TCP & OpenSSH Daemon & Host Nativo Linux & Administración Remota Segura por Consola \\
+  25 & TCP & Postfix MTA & Contenedor Docker & Transferencia de Correo Saliente (SMTP) \\
+  80 & TCP & Nginx Reverse Proxy & Contenedor Docker & Portal Web Financiero y Redirección HTTP \\
+  110 & TCP & Dovecot POP3 & Contenedor Docker & Recuperación de Mensajes de Correo \\
+  143 & TCP & Dovecot IMAP & Contenedor Docker & Sincronización y Acceso a Buzones \\
+  443 & TCP & Nginx TLS Server & Contenedor Docker & Portal Web Seguro Bancario (HTTPS) \\
+  587 & TCP & Postfix Submission & Contenedor Docker & Envío Autenticado de Correo (STARTTLS) \\
+  993 & TCP & Dovecot IMAPS & Contenedor Docker & Acceso Seguro a Correo sobre Cifrado TLS \\
+  995 & TCP & Dovecot POP3S & Contenedor Docker & Descarga Segura de Correo sobre TLS \\
   3000 & TCP & Grafana Analytics & Contenedor Docker & Tableros de Telemetría y Métricas \\
   5432 & TCP & PostgreSQL Engine & Contenedor Docker & Base de Datos Relacional de Clientes \\
   5636 & TCP & EveBox GUI & Contenedor Docker & Consola de Alertas IDS/IPS en Tiempo Real \\
-  9392 & TCP & Greenbone GSA & Contenedor Docker & Consola de Auditoría y Escaneo OpenVAS \\
-  22 & TCP & OpenSSH Daemon & Host Nativo Linux & Administración Remota Segura por Consola \\
+  8000 & TCP & Portainer CE & Contenedor Docker & Gestión Gráfica de Contenedores Docker \\
+  8080 & TCP & Roundcube Webmail & Contenedor Docker & Plataforma Web de Correo Corporativo \\
+  8082 & TCP & TinyFileManager & Contenedor Docker & Gestor Web de Archivos y Documentos \\
+  8085 & TCP & Uyuni Way Web & Contenedor Docker & Portal Turístico Comunitario (React/Vite) \\
   \bottomrule
   \end{tabular}
   \end{tablaAPA}%
-}{Elaboración propia con base en la configuración de \texttt{docker-compose.yml} y el firewall del host.}
+}{Elaboración propia con base en el levantamiento de puertos del escaneo Nmap y la configuración de \texttt{docker-compose.yml}.}%
 \end{table}
 
 \newpage
