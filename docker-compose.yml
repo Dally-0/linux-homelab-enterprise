@@ -56,8 +56,6 @@ services:
       - "443:443"
     volumes:
       - ${WEB_SITE_DIR:-./services/web/public}:/usr/share/nginx/html:ro
-      # TLS interno (CA + cert wildcard *.sudoers.lan). Autogenerado o manual con tls-gen.sh
-      - ./services/web/tls:/etc/nginx/tls
     networks:
       - tso-net
     # Portal de la intranet → siempre arriba al boot (*)
