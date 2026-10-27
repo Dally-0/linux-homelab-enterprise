@@ -4,7 +4,7 @@
 
 \section{Resumen Ejecutivo de Vulnerabilidades Encontradas}
 
-Durante la ejecución de la auditoría técnica de seguridad ofensiva sobre el servidor objetivo \texttt{192.168.100.85} (\texttt{dc1.sudoers.lan}), se utilizó el motor de escaneo y auditoría de vulnerabilidades de Nmap (\textit{Nmap Scripting Engine} -- NSE) aplicando técnicas avanzadas de evasión con señuelos aleatorios (\textit{Decoy Scanning} \texttt{-D RND:20}) y control estricto de tiempo de respuesta por script (\texttt{--script-timeout 30s}).
+Durante la ejecución de la auditoría técnica de seguridad ofensiva sobre el servidor objetivo \texttt{192.168.100.85} (\texttt{dc1.sudoers.lan}), se utilizó el motor de escaneo y auditoría de vulnerabilidades de Nmap (\textit{Nmap Scripting Engine} -- NSE) aplicando técnicas avanzadas de evasión con señuelos aleatorios (\textit{Decoy Scanning} \texttt{-D RND:20}), exclusión de sondas DoS bloqueadas y control estricto de tiempo de respuesta por script (\texttt{--script-timeout 30s}).
 
 La totalidad de los hallazgos y evidencias del presente capítulo derivan de forma exclusiva del reporte empírico emitido por dicha consola de auditoría. Se identificaron un total de \textbf{5 vulnerabilidades técnicas y 1 mecanismo de defensa activo confirmado}, clasificados rigurosamente según el estándar internacional \textit{Common Vulnerability Scoring System} versión 3.1 (CVSS v3.1) \citep{first_cvss_2019} y la taxonomía del \textit{Common Weakness Enumeration} (CWE).
 
@@ -168,6 +168,21 @@ MAC Address: 08:00:27:C3:FB:76 (Oracle VirtualBox virtual NIC)
 
 Nmap done: 1 IP address (1 host up) scanned in 49.66 seconds
 \end{lstlisting}
+
+\subsection{Evasión Exitosa de las Reglas Defensivas de Nginx}
+
+A diferencia del intento de escaneo inicial que se estancaba en el 99.58\% (ver Capítulo II, FIGURA \ref{fig:antinmap}), la ejecución de este escaneo optimizado logró sortear con éxito las reglas de retención y tarpitting del servidor web Nginx y del firewall del host.
+
+La estrategia de evasión implementó tres elementos decisivos:
+\begin{enumerate}
+  \item \textbf{Uso de Señuelos (\textit{Decoys} \texttt{-D RND:20}):} Se intercalaron 20 direcciones IP aleatorias junto a la dirección IP real del auditor, dispersando el conteo de conexiones concurrentes en los módulos \texttt{limit\_conn} y \texttt{meter conns\_per\_ip} de Nftables.
+  \item \textbf{Omisión de Sondas DoS (\texttt{"vuln and not doos"}):} Se excluyeron los scripts específicos de prueba de denegación de servicio (como \texttt{http-slowloris-check}), impidiendo que el firewall activara las reglas de descarte silencioso (\textit{silent drop}).
+  \item \textbf{Control de Tiempo de Espera por Script (\texttt{--script-timeout 30s}):} Limitó el tiempo máximo de socket a 30 segundos, permitiendo que el escaneo completara el 100\% de los 1000 puertos en tan solo \textbf{49.66 segundos}.
+\end{enumerate}
+
+La \textbf{FIGURA \ref{fig:escaneo-nmap}} presenta la captura de pantalla de la terminal en Kali Linux evidenciando la finalización exitosa del escaneo y la evasión de las defensas de retención.
+
+\capturaAPA{fig:escaneo-nmap}{Evidencia Gráfica del Escaneo de Vulnerabilidades con Evasión Nmap NSE}{escaneonmap.jpeg}{Captura de pantalla de la terminal Kali Linux mostrando la evasión del bloqueo de Nginx mediante señuelos (-D RND:20) y límite de tiempo por script (--script-timeout 30s).}
 
 \section{División y Análisis Pormenorizado de Cada Vulnerabilidad}
 

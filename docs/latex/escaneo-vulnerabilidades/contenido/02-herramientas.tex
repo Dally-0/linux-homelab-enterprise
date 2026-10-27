@@ -2,93 +2,91 @@
 %  CAPÍTULO II: HERRAMIENTAS UTILIZADAS Y METODOLOGÍA DE EVALUACIÓN
 % ============================================================================
 
-\section{Arsenal Tecnológico y Herramientas Utilizadas}
+\section{Marco Teórico del Arsenal Tecnológico de Seguridad}
 
-Para llevar a cabo una auditoría integral que cubra tanto la capa de red como la capa de aplicaciones web y la seguridad de los contenedores, se seleccionó un conjunto de herramientas de estándar internacional reconocidas en la industria de la ciberseguridad \citep{nist_sp800_115}.
+La evaluación de la postura de seguridad, la detección de vulnerabilidades y la verificación de las capacidades de respuesta defensiva demandan la integración coordinada de herramientas especializadas en las diferentes capas del modelo OSI \citep{nist_sp800_115}. A continuación se desarrollan los fundamentos conceptuales de las herramientas aplicadas en el presente ejercicio.
 
+% -----------------------------------------------------------------------------
 \subsection{Nmap (Network Mapper)}
-\textbf{Nmap} es la herramienta de referencia mundial para la exploración de redes, mapeo de topologías y auditoría de seguridad perimetral \citep{lyon_nmap_2009}. En esta evaluación se empleó para:
+% -----------------------------------------------------------------------------
+\textbf{Nmap} constituye el estándar de facto en exploración de redes, auditoría de puertos y evaluación de superficies de ataque perimetral \citep{lyon_nmap_2009}. Opera mediante la emisión deliberada de paquetes IP crudos para determinar qué equipos están activos en el segmento, qué puertos TCP y UDP se encuentran abiertos, qué servicios y versiones de software responden, y qué sistema operativo subyace en el host.
+
+Dentro de sus capacidades más avanzadas destaca el \textbf{Nmap Scripting Engine (NSE)}, el cual permite automatizar tareas complejas de auditoría mediante scripts desarrollados en lenguaje Lua. En este proyecto se utilizó la categoría \texttt{vuln} para interrogar la presencia de fallos conocidos y debilidades de configuración.
+
+Asimismo, Nmap dispone de mecanismos para evaluación en entornos restringidos por cortafuegos e IPS, tales como la generación de señuelos aleatorios (\textit{Decoy Scanning} mediante \texttt{-D RND:20}), técnica que intercala la dirección IP real del atacante entre múltiples direcciones IP falsas generadas aleatoriamente, dificultando la correlación del origen de la sonda por parte de los sensores defensivos.
+
+% -----------------------------------------------------------------------------
+\subsection{Wireshark: Análisis Forense y de Protocolos de Red}
+% -----------------------------------------------------------------------------
+\textbf{Wireshark} es el analizador de protocolos de red y de paquetes de código abierto más utilizado a nivel mundial \citep{sanders_practical_2020}. Permite capturar e interactuar con el tráfico que atraviesa una interfaz de red física o virtual en tiempo real, operando en modo promiscuo.
+
+Sus capacidades conceptuales clave comprenden:
 \begin{itemize}
-  \item Descubrimiento activo de hosts mediante sondas ARP e ICMP combinadas.
-  \item Barrido de puertos TCP mediante la técnica de escaneo sigiloso SYN (\textit{Stealth Scan} con flag \texttt{-sS}).
-  \item Identificación precisa de versiones y \textit{banners} de los servicios expuestos (\texttt{-sV}).
-  \item Ejecución automatizada de scripts NSE (\textit{Nmap Scripting Engine}) especializados en auditoría y explotación controlada de vulnerabilidades (\texttt{--script vuln}).
+  \item \textbf{Inspección Profunda de Capas:} Decodificación completa de tramas desde la capa de enlace (Ethernet) hasta protocolos de aplicación (HTTP, DNS, SMTP, TLS, SMB, LDAP).
+  \item \textbf{Filtros de Captura y Visualización:} Utilización de filtros BPF (\textit{Berkeley Packet Filters}) para aislar flujos sospechosos y reglas de visualización para reconstruir sesiones TCP (\textit{Follow TCP Stream}).
+  \item \textbf{Verificación de Confidencialidad Criptográfica:} Comprobación empírica de si la información sensible (credenciales, cookies de sesión, mensajes de correo) transita en texto plano (HTTP, POP3, IMAP) o si se encuentra encapsulada dentro de canales criptográficos robustos (TLS 1.2/1.3).
 \end{itemize}
 
-\subsection{Greenbone Community Edition (OpenVAS)}
-\textbf{OpenVAS} (\textit{Open Vulnerability Assessment System}), integrado en la plataforma \textit{Greenbone Community Edition}, es un escáner de vulnerabilidades integral de nivel corporativo \citep{greenbone_gvm_2024}. Su motor de auditoría ejecuta miles de pruebas de vulnerabilidad de red (\textit{Network Vulnerability Tests}, NVTs) actualizadas diariamente contra bases de datos CVE y estándares SCAP. Se utilizó para:
+% -----------------------------------------------------------------------------
+\subsection{OWASP ZAP (Zed Attack Proxy)}
+% -----------------------------------------------------------------------------
+\textbf{OWASP ZAP} (Zed Attack Proxy) es una plataforma integral de pruebas de seguridad dinámicas para aplicaciones web (DAST -- \textit{Dynamic Application Security Testing}), mantenida por la comunidad global de OWASP \citep{owasp_top10_2021}. Funciona como un \textit{proxy} de interceptación intercalado entre el navegador del auditor y la aplicación web objetivo.
+
+Entre sus módulos de operación destacan:
 \begin{itemize}
-  \item Escanear en profundidad los servicios web y bases de datos expuestas en el servidor.
-  \item Clasificar hallazgos de acuerdo con el estándar CVSS (\textit{Common Vulnerability Scoring System}).
-  \item Identificar fallos de configuración en protocolos TLS, algoritmos criptográficos débiles y versiones desactualizadas de paquetes en el servidor.
+  \item \textbf{Spider / Rastreador Web:} Mapea automáticamente la estructura de la aplicación, formularios y endpoints navegables.
+  \item \textbf{Escaneo Pasivo:} Analiza las respuestas HTTP sin enviar cargas adicionales, identificando de manera no intrusiva problemas como la ausencia de cabeceras de seguridad (\texttt{Content-Security-Policy}, \texttt{X-Frame-Options}, \texttt{X-Content-Type-Options}) o cookies carentes de atributos \texttt{Secure} y \texttt{HttpOnly}.
+  \item \textbf{Escaneo Activo:} Inyecta vectores de prueba dirigidos contra los parámetros de la aplicación para detectar inyecciones SQL (SQLi), Cross-Site Scripting (XSS), Local File Inclusion (LFI) y debilidades de control de acceso.
+  \item \textbf{Clasificación de Alertas por Código de Color:} ZAP jerarquiza los hallazgos en cuatro niveles de riesgo: Rojo (\textit{High Risk}), Naranja (\textit{Medium Risk}), Amarillo (\textit{Low Risk}) y Azul (\textit{Informational}).
 \end{itemize}
 
-\subsection{Trivy (Aqua Security)}
-\textbf{Trivy} es un escáner integral de seguridad especializado en entornos de contenedores Docker, sistemas de archivos e infraestructura como código \citep{aqua_trivy_2024}. Se utilizó para evaluar directamente las imágenes de Docker que componen el entorno de servicios de la organización (PostgreSQL, Roundcube, Nginx, TinyFileManager), detectando librerías empaquetadas con vulnerabilidades conocidas (CVE) antes y durante su ejecución.
+% -----------------------------------------------------------------------------
+\subsection{Suricata IDS/IPS}
+% -----------------------------------------------------------------------------
+\textbf{Suricata} es un motor de seguridad de red de código abierto de última generación, capaz de operar como sistema de detección de intrusos (NIDS) y como sistema de prevención en línea (NIPS) \citep{oisf_suricata_2024}. Su arquitectura multi-hilo (\textit{multi-threaded}) optimiza el procesamiento paralelo del tráfico en interfaces de alta velocidad.
 
-\subsection{Nikto y SQLMap}
-Para complementar el análisis web en la capa de aplicación (Capa 7), se utilizaron:
-\begin{itemize}
-  \item \textbf{Nikto Web Scanner:} Escáner de servidores web que identifica más de 6700 archivos y programas potencialmente peligrosos, versiones desactualizadas de servidores y cabeceras HTTP inseguras.
-  \item \textbf{SQLMap:} Herramienta especializada en la detección automatizada de fallos de inyección SQL en parámetros de formularios y cabeceras de consulta.
-\end{itemize}
+Suricata implementa inspección profunda de paquetes (DPI) y análisis contextual de protocolos (HTTP, TLS, DNS, SSH, SMB). Su motor compara las firmas del tráfico en tránsito contra reglas estandarizadas (como las reglas bancarias personalizadas o los conjuntos \textit{Emerging Threats}), pudiendo alertar pasivamente o descartar paquetes (\texttt{DROP}) en tiempo real cuando se acopla a las colas \texttt{NFQUEUE} del cortafuegos \texttt{nftables}.
 
-\subsection{Suricata IDS/IPS y Consola EveBox}
-Como elemento distintivo del entorno defensivo implementado en el host objetivo, se mantuvo activo el motor de prevención de intrusos \textbf{Suricata 7.0} acoplado a la consola gráfica de eventos \textbf{EveBox} \citep{oisf_suricata_2024}. Esto permitió validar no solo qué vulnerabilidades posee el servidor, sino verificar en tiempo real si los intentos de escaneo y explotación eran detectados y mitigados activamente por el sistema de defensa perimetral.
+% -----------------------------------------------------------------------------
+\subsection{EveBox: Consola y Gestión de Telemetría en Tiempo Real}
+% -----------------------------------------------------------------------------
+\textbf{EveBox} es la interfaz web gráfica diseñada para la correlación, filtrado y gestión de eventos emitidos por el motor Suricata a través de su archivo de registro estructurado \texttt{eve.json} \citep{oisf_suricata_2024}. 
 
-\begin{table}[H]
-\centering
-\caption{Resumen del Arsenal de Auditoría y Propósito Operativo}
-\label{tab:arsenal-herramientas}
-\contenidoConFuente{%
-  \begin{tablaAPA}
-  \begin{tabular}{L{3.2cm}L{3.8cm}L{4.2cm}L{3.8cm}}
-  \toprule
-  \textbf{Herramienta} & \textbf{Capa de Evaluación} & \textbf{Alcance Operativo} & \textbf{Tipo de Análisis} \\
-  \midrule
-  \textbf{Nmap 7.94+} & Capa de Transporte / Red & Detección de puertos, OS fingerprinting y banners & Activo no intrusivo / NSE vuln \\
-  \textbf{OpenVAS 24.10} & Capa de Servicios / Red & Escaneo de vulnerabilidades con feeds NVT/CVE & Auditoría profunda con puntaje CVSS \\
-  \textbf{Trivy 0.50+} & Capa de Contenedores & Análisis de imágenes Docker y dependencias SO & Auditoría estática de contenedores (SAST) \\
-  \textbf{Nikto 2.5} & Capa de Aplicación (HTTP) & Verificación de cabeceras, archivos sensibles y SSL & Auditoría dinámica web (DAST) \\
-  \textbf{SQLMap 1.8} & Capa de Aplicación (Datos) & Detección y explotación de fallos de inyección SQL & DAST enfocado a bases de datos \\
-  \textbf{Suricata + EveBox} & Capa de Telemetría Defensiva & Detección de firmas y bloqueo IPS con NFQUEUE & Monitoreo en tiempo real de los escaneos \\
-  \bottomrule
-  \end{tabular}
-  \end{tablaAPA}%
-}{Elaboración propia.}
-\end{table}
+EveBox proporciona tableros en tiempo real con líneas temporales de incidentes, clasificación por severidad, gráficos de flujos de red y detalles minuciosos del paquete infractor (dirección IP origen y destino, payload decodificado, firma detonada y acción adoptada por el sensor).
 
-\section{Metodología de Evaluación y Flujo de Trabajo}
+% -----------------------------------------------------------------------------
+\section{Evidencias de la Auditoría Dinámica Web y Monitoreo Defensivo}
+% -----------------------------------------------------------------------------
 
-La auditoría se estructuró siguiendo los lineamientos de la guía técnica NIST SP 800-115 \citep{nist_sp800_115}, dividida en cuatro fases secuenciales:
+En esta sección se incorporan las evidencias gráficas obtenidas durante las pruebas con las herramientas analizadas.
 
-\begin{enumerate}
-  \item \textbf{Fase 1: Reconocimiento y Mapeo de Superficie de Ataque:} Identificación de la presencia del host en el segmento \texttt{192.168.100.0/24} mediante barridos ARP y sondeos TCP SYN rápidos con Nmap.
-  \item \textbf{Fase 2: Enumeración Detallada de Servicios y Banners:} Escaneo de los 65535 puertos TCP, extracción de versiones de software de los demonios escuchando y ejecución de scripts de análisis criptográfico y de cabeceras.
-  \item \textbf{Fase 3: Escaneo y Catalogación de Vulnerabilidades:} Ejecución de tareas de escaneo con Greenbone/OpenVAS contra la dirección IP objetivo, complementado con auditorías directas de imágenes Docker con Trivy y análisis web con Nikto.
-  \item \textbf{Fase 4: Verificación de Detección Defensiva y Contramedidas:} Inspección de las alertas generadas en EveBox/Suricata para comprobar la respuesta del servidor ante las sondas maliciosas y diseño de la estrategia de mitigación técnica.
-\end{enumerate}
+\subsection{Auditoría de Aplicaciones Web con OWASP ZAP}
 
-\section{Comandos Ejecutados Durante la Auditoría}
+Se ejecutó un escaneo dinámico en vivo mediante OWASP ZAP sobre la aplicación web independiente \textbf{Uyuni Way Web}, desplegada en el puerto \texttt{8085/tcp} del servidor objetivo.
 
-A continuación se presentan los comandos representativos ejecutados desde la estación auditora Kali Linux (\texttt{192.168.100.50}) contra el objetivo (\texttt{192.168.100.85}):
+La \textbf{FIGURA \ref{fig:escaneo-zaproxy}} muestra la ejecución del escaneo en vivo de ZAP sobre el puerto 8085, mientras que la \textbf{FIGURA \ref{fig:alerta-naranja-zap}} expone la matriz de alertas de severidad media (color naranja) descubiertas durante la auditoría.
 
-\begin{lstlisting}[style=terminal, caption={Comandos Principales de Escaneo Ejecutados en Kali Linux}, label={lst:comandos-escaneo}]
-# 1. Reconocimiento y deteccion de puertos con versiones y scripts base
-nmap -sS -sV -sC -p- -T4 --open -oN nmap_full_target.txt 192.168.100.85
+\capturaAPA{fig:escaneo-zaproxy}{Escaneo Dinámico en Vivo con OWASP ZAP sobre Uyuni Way Web (Puerto 8085)}{escaneozaproxy.jpeg}{Captura de pantalla de la interfaz de OWASP ZAP ejecutando el escaneo activo contra el servicio en el puerto 8085.}
 
-# 2. Escaneo especializado de vulnerabilidades mediante Nmap NSE
-nmap -p 80,443,3000,5432,5636,8080,8082 --script vuln -sV 192.168.100.85
+\capturaAPA{fig:alerta-naranja-zap}{Alertas de Nivel Medio (Color Naranja) Detectadas por OWASP ZAP}{alertanaranja.jpeg}{Reporte de vulnerabilidades de severidad media generadas por ZAP durante el escaneo sobre Uyuni Way Web.}
 
-# 3. Auditoria de configuracion y cabeceras HTTP con Nikto
-nikto -h http://192.168.100.85 -output nikto_report.txt
+\subsection{Supervisión de Amenazas en Tiempo Real con EveBox}
 
-# 4. Auditoria de vulnerabilidades en imagenes Docker con Trivy
-trivy image postgres:16-alpine
-trivy image nginx:alpine
+La interacción de las herramientas ofensivas contra la infraestructura del host auditado fue capturada por el sensor Suricata y visualizada en la consola web EveBox.
 
-# 5. Lanzamiento y gestion del escaner corporativo OpenVAS
-cd ~/linux-homelab-enterprise/services/openvas
-sudo bash run.sh start
-sudo bash run.sh status
+La \textbf{FIGURA \ref{fig:evebox-alertas}} ilustra el panel de eventos de seguridad en tiempo real generado por EveBox en el puerto \texttt{5636/tcp}, confirmando la detección del tráfico anómalo generado durante las pruebas.
+
+\capturaAPA{fig:evebox-alertas}{Panel de Eventos y Alertas de Seguridad en Tiempo Real en EveBox}{evebox.jpeg}{Consola gráfica de EveBox visualizando las alertas de intrusión y escaneo registradas por Suricata.}
+
+\subsection{Comportamiento Defensivo del Servidor ante Escaneos Agresivos (Anti-Nmap)}
+
+Durante las fases iniciales de auditoría, se ejecutó el comando estándar de escaneo de vulnerabilidades:
+\begin{lstlisting}[style=terminal, caption={Comando Agresivo Inicial de Nmap}, label={lst:cmd-agresivo}]
+sudo nmap -sV --script vuln 192.168.100.85
 \end{lstlisting}
+
+Dicho escaneo experimentó una retención prolongada estancándose en el \textbf{99.58\%} de ejecución debido a la acción defensiva del servidor web Nginx y del cortafuegos del host. Al detectar ráfagas agresivas de sockets lentos (asociadas a scripts DoS como Slowloris), las reglas del servidor aplicaron descartes silenciosos (\textit{silent drops}), obligando a Nmap a esperar indefinidamente por retransmisiones TCP.
+
+La \textbf{FIGURA \ref{fig:antinmap}} evidencia este fenómeno de tarpitting defensivo registrado en la terminal del auditor.
+
+\capturaAPA{fig:antinmap}{Estancamiento de Nmap NSE al 99.58\% por Efecto Tarpitting Defensivo en Nginx}{antinmap.jpeg}{Captura de pantalla de la terminal en Kali Linux evidenciando el bloqueo del escaneo agresivo de Nmap.}
