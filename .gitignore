@@ -4,8 +4,8 @@ IT_INSTALL_SUMMARY.txt
 .install-summary.txt
 
 # Datos persistentes de los servicios
-data/
-volumes/
+/data/
+/volumes/
 
 # Certs TLS generados para el web (ca + key: NO versionar)
 services/web/tls/
