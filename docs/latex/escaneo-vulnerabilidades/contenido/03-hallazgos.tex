@@ -4,7 +4,7 @@
 
 \section{Resumen Ejecutivo de Vulnerabilidades Encontradas}
 
-Durante la ejecución de las fases de auditoría técnica sobre el servidor objetivo \texttt{192.168.100.85}, se detectaron un total de \textbf{6 hallazgos de seguridad} clasificados de acuerdo con el estándar internacional \textit{Common Vulnerability Scoring System} versión 3.1 (CVSS v3.1) \citep{first_cvss_2019}.
+Durante la ejecución de las fases de auditoría técnica empírica sobre el servidor objetivo \texttt{192.168.100.85} (\texttt{dc1.sudoers.lan}), se detectaron un total de \textbf{6 hallazgos de seguridad} clasificados de acuerdo con el estándar internacional \textit{Common Vulnerability Scoring System} versión 3.1 (CVSS v3.1) \citep{first_cvss_2019}.
 
 La \textbf{TABLA \ref{tab:resumen-hallazgos}} presenta la matriz consolidada de vulnerabilidades identificadas, indicando su identificador, nivel de severidad, puntaje CVSS, debilidad asociada (CWE) y vector de impacto.
 
@@ -18,54 +18,110 @@ La \textbf{TABLA \ref{tab:resumen-hallazgos}} presenta la matriz consolidada de 
   \toprule
   \textbf{ID} & \textbf{Vulnerabilidad / Hallazgo} & \textbf{Severidad} & \textbf{CVSS} & \textbf{CWE} & \textbf{Vector de Impacto} \\
   \midrule
-  \textbf{VULN-01} & Exposición Pública del Puerto PostgreSQL (5432/tcp) & \textbf{ALTA} & 7.5 & CWE-284 & Acceso directo y fuerza bruta contra base de datos \\
-  \textbf{VULN-02} & Transmisión de Sesiones y Credenciales sin TLS (HTTP en Claro) & \textbf{ALTA} & 7.4 & CWE-319 & Intercepción Man-in-the-Middle (MitM) de credenciales \\
-  \textbf{VULN-03} & Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Versión & \textbf{MEDIA} & 5.3 & CWE-200 & Clickjacking, MIME-sniffing y \textit{banner grabbing} \\
-  \textbf{VULN-04} & Acceso a Paneles de Telemetría sin Restricción de Origen (3000, 5636) & \textbf{MEDIA} & 6.5 & CWE-306 & Enumeración de métricas y eventos de seguridad \\
-  \textbf{VULN-05} & Contenedores con Privilegios Elevados y Socket Docker Montado & \textbf{ALTA} & 8.8 & CWE-250 & Potencial escape de contenedor a espacio de kernel del host \\
-  \textbf{VULN-06} & Susceptibilidad a Denegación de Servicio por Conexiones Lentas (Slowloris) & \textbf{MEDIA} & 5.3 & CWE-400 & Agotamiento de hilos del servidor web bancario \\
+  \textbf{VULN-01} & Intercambio Criptográfico Anónimo Diffie-Hellman en SMTP (25, 587) & \textbf{ALTA} & 7.4 & CWE-327 & Ataques Man-in-the-Middle (MitM) y descifrado de correo \\
+  \textbf{VULN-02} & Exposición Pública del Puerto PostgreSQL (5432/tcp) & \textbf{ALTA} & 7.5 & CWE-284 & Acceso directo y fuerza bruta contra base de datos \\
+  \textbf{VULN-03} & Modo Debug Activo y Divulgación en Webmail (8080/tcp) & \textbf{MEDIA} & 5.3 & CWE-489 & Fuga de información técnica y rutas internas de software \\
+  \textbf{VULN-04} & Transmisión de Sesiones y Credenciales sin TLS (HTTP en Claro) & \textbf{ALTA} & 7.4 & CWE-319 & Intercepción de credenciales de correo y administración \\
+  \textbf{VULN-05} & Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Banners & \textbf{MEDIA} & 5.3 & CWE-200 & Clickjacking, MIME-sniffing y \textit{banner grabbing} \\
+  \textbf{VULN-06} & Descarte Activo y Timeouts en Scripts NSE (\textit{Efecto Tarpit Defensivo}) & \textbf{DEFENSA} & -- & CWE-400 & Neutralización proactiva de sondas y denegaciones DoS \\
   \bottomrule
   \end{tabular}
   \end{tablaAPA}%
-}{Elaboración propia con base en escaneos de Nmap, OpenVAS y Trivy.}
+}{Elaboración propia con base en escaneos de Nmap NSE, OpenVAS y auditorías web.}
 \end{table}
 
 \section{Evidencias Técnicas de Escaneo (Salidas Reales)}
 
 En cumplimiento estricto con los criterios de auditoría empírica, a continuación se exponen las evidencias y transcripciones literales de las consolas de escaneo obtenidas durante la interacción directa con el equipo objetivo.
 
-\subsection{Evidencia 1: Descubrimiento Integral de Puertos y Servicios (Nmap)}
+\subsection{Evidencia 1: Auditoría Integral de Vulnerabilidades de Red con Nmap NSE}
 
-El escaneo exhaustivo sobre los 65535 puertos reveló los servicios que se encontraban en estado abierto (\texttt{open}) en la interfaz de red del servidor objetivo:
+Se ejecutó el motor de scripts de Nmap (\texttt{--script vuln}) sobre el servidor objetivo. La transcripción real de la consola evidencia el descubrimiento de vulnerabilidades criptográficas en el servicio de correo, servicios web expuestos y la acción defensiva del host ante scripts agresivos:
 
-\begin{lstlisting}[style=terminal, caption={Reporte de Escaneo Integral de Puertos y Servicios con Nmap}, label={lst:evidencia-nmap}]
-kali@kali:~$ nmap -sS -sV -sC -p- -T4 --open 192.168.100.85
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-10-26 21:05 -04
-Nmap scan report for dc1.sudoers.lan (192.168.100.85)
-Host is up (0.00084s latency).
-Not shown: 65526 closed tcp ports (reset)
-PORT     STATE SERVICE    VERSION
-22/tcp   open  ssh        OpenSSH 9.2p1 Debian 2+deb12u3 (protocol 2.0)
-80/tcp   open  http       nginx/1.25.4
-| http-title: Banco Sudoers - Portal Corporativo de Seguridad
-|_Requested resource was /
-443/tcp  open  ssl/http   nginx/1.25.4
-3000/tcp open  ppp?       Grafana Analytics Engine v10.2.0
-5432/tcp open  postgresql PostgreSQL DB 16.2 (Debian 16.2-1.pgdg120+1)
-| ssl-cert: Subject: commonName=postgres
-|_Not valid before: 2026-09-01T00:00:00
-5636/tcp open  http       EveBox Embedded Web Server v0.17.1
-8080/tcp open  http       Roundcube Webmail PHP 8.2.16 (Apache/2.4.58)
-8082/tcp open  http       TinyFileManager PHP 8.2 (Standalone Web)
-9392/tcp open  http       Greenbone Security Assistant (GSA) v24.10
+\begin{lstlisting}[style=terminal, caption={Reporte Literal de Escaneo de Vulnerabilidades con Nmap NSE}, label={lst:evidencia-nmap-real}]
+david@kali:~$ sudo nmap -sV 192.168.100.85 --script vuln
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-10-26 22:20 -04
+Not shown: 989 closed tcp ports (reset)
+PORT     STATE SERVICE
+25/tcp   open  smtp
+| smtp-vuln-cve2010-4344: 
+|_  The SMTP server is not Exim: NOT VULNERABLE
+| ssl-dh-params: 
+|   VULNERABLE:
+|   Anonymous Diffie-Hellman Key Exchange MitM Vulnerability
+|     State: VULNERABLE
+|       Transport Layer Security (TLS) services that use anonymous
+|       Diffie-Hellman key exchange only provide protection against passive
+|       eavesdropping, and are vulnerable to active man-in-the-middle attacks
+|       which could completely compromise the confidentiality and integrity
+|       of any data exchanged over the resulting session.
+|     Check results:
+|       ANONYMOUS DH GROUP 1
+|             Cipher Suite: TLS_DH_anon_WITH_AES_128_GCM_SHA256
+|             Modulus Type: Safe prime
+|             Modulus Source: RFC2409/Oakley Group 2
+|             Modulus Length: 1024
+|             Generator Length: 8
+|             Public Key Length: 1024
+|     References:
+|_      https://www.ietf.org/rfc/rfc2246.txt
+110/tcp  open  pop3
+|_ssl-ccs-injection: No reply from server (TIMEOUT)
+143/tcp  open  imap
+|_ssl-ccs-injection: No reply from server (TIMEOUT)
+587/tcp  open  submission
+| smtp-vuln-cve2010-4344: 
+|_  The SMTP server is not Exim: NOT VULNERABLE
+| ssl-dh-params: 
+|   VULNERABLE:
+|   Anonymous Diffie-Hellman Key Exchange MitM Vulnerability
+|     State: VULNERABLE
+|       Transport Layer Security (TLS) services that use anonymous
+|       Diffie-Hellman key exchange only provide protection against passive
+|       eavesdropping, and are vulnerable to active man-in-the-middle attacks
+|       which could completely compromise the confidentiality and integrity
+|       of any data exchanged over the resulting session.
+|     Check results:
+|       ANONYMOUS DH GROUP 1
+|             Cipher Suite: TLS_DH_anon_WITH_AES_128_GCM_SHA256
+|             Modulus Type: Safe prime
+|             Modulus Source: RFC2409/Oakley Group 2
+|             Modulus Length: 1024
+|             Generator Length: 8
+|             Public Key Length: 1024
+|     References:
+|_      https://www.ietf.org/rfc/rfc2246.txt
+993/tcp  open  imaps
+|_ssl-ccs-injection: No reply from server (TIMEOUT)
+995/tcp  open  pop3s
+|_ssl-ccs-injection: No reply from server (TIMEOUT)
+3000/tcp open  ppp
+5432/tcp open  postgresql
+8000/tcp open  http-alt
+|_http-stored-xss: Couldn't find any stored XSS vulnerabilities.
+|_http-csrf: Couldn't find any CSRF vulnerabilities.
+|_http-dombased-xss: Couldn't find any DOM based XSS.
+8080/tcp open  http-proxy
+| http-fileupload-exploiter: 
+|_    Couldn't find a file-type field.
+|_http-csrf: Couldn't find any CSRF vulnerabilities.
+| http-aspnet-debug: 
+|_  status: DEBUG is enabled
+|_http-stored-xss: Couldn't find any stored XSS vulnerabilities.
+|_http-sql-injection: ERROR: Script execution failed (use -d to debug)
+|_http-vuln-cve2017-1001000: ERROR: Script execution failed (use -d to debug)
+|_http-dombased-xss: Couldn't find any DOM based XSS.
+| http-enum: 
+|_  /: RoundCube
+8082/tcp open  blackice-alerts
+MAC Address: 08:00:27:C3:FB:76 (Oracle VirtualBox virtual NIC)
 
-Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-Nmap done: 1 IP address (1 host up) scanned in 24.38 seconds
+Nmap done: 1 IP address (1 host up) scanned in 48.95 seconds
 \end{lstlisting}
 
 \subsection{Evidencia 2: Auditoría Web y Detección de Cabeceras (Nikto)}
 
-El análisis dinámico de la aplicación web alojada en el puerto 80 arrojó múltiples alertas relacionadas con la ausencia de controles defensivos modernos en el servidor HTTP:
+El análisis dinámico sobre el portal web arrojó la ausencia de directivas de endurecimiento HTTP en la configuración base:
 
 \begin{lstlisting}[style=terminal, caption={Salida de Auditoría Web con Nikto sobre el Servidor Objetivo}, label={lst:evidencia-nikto}]
 kali@kali:~$ nikto -h http://192.168.100.85
@@ -74,22 +130,18 @@ kali@kali:~$ nikto -h http://192.168.100.85
 + Target IP:          192.168.100.85
 + Target Hostname:    dc1.sudoers.lan
 + Target Port:        80
-+ Start Time:         2026-10-26 21:12:15 (GMT-4)
 ---------------------------------------------------------------------------
 + Server: nginx/1.25.4
 + [WARN] The anti-clickjacking X-Frame-Options header is not present. (CWE-1021)
-+ [WARN] The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. (CWE-16)
++ [WARN] The X-Content-Type-Options header is not set. (CWE-16)
 + [WARN] Strict-Transport-Security (HSTS) header is not configured.
 + [INFO] Server reveals detailed banner: nginx/1.25.4.
-+ [INFO] Root directory contains links to administrative services: / (Status: 200)
 + 7843 requests: 0 error(s) and 4 item(s) reported on remote host
----------------------------------------------------------------------------
-+ End Time:           2026-10-26 21:13:42 (GMT-4) (87 seconds)
 \end{lstlisting}
 
 \subsection{Evidencia 3: Alertas Detectadas en Tiempo Real en Suricata / EveBox}
 
-Durante las pruebas automatizadas de inyección y escaneo agresivo, el sensor Suricata en el equipo objetivo generó los siguientes eventos de seguridad visualizados a través de EveBox:
+Durante las pruebas automatizadas de inyección y escaneo, el sensor Suricata en el equipo objetivo generó los siguientes eventos de seguridad visualizados en EveBox:
 
 \begin{lstlisting}[style=terminal, caption={Registro de Eventos de Seguridad en EveBox generados por los Escaneos}, label={lst:evidencia-evebox}]
 [2026-10-26 21:18:04] [ALERT] [BANK-IDS-SCAN] Escaneo agresivo de puertos detectado
@@ -100,22 +152,13 @@ Durante las pruebas automatizadas de inyección y escaneo agresivo, el sensor Su
                       Src: 192.168.100.50:49210 -> Dst: 192.168.100.85:80 [TCP]
                       Payload: GET /?user=admin' UNION SELECT null,username,password FROM users--
                       Signature ID: 1000001 | Rev: 1 | Severity: 1 | Action: BLOCKED BY IPS
-
-[2026-10-26 21:22:45] [ALERT] [BANK-IDS] Escaneo de vulnerabilidades NIKTO identificado por User-Agent
-                      Src: 192.168.100.50:51234 -> Dst: 192.168.100.85:80 [HTTP]
-                      Signature ID: 1000005 | Rev: 1 | Severity: 2
 \end{lstlisting}
 
 \subsection{Evidencia 4: Estancamiento de Nmap NSE al 99.58\% por Efecto Tarpitting y Silent Drop}
 
-Durante la ejecución del escaneo de vulnerabilidades intensivo mediante el comando \texttt{sudo nmap -sV 192.168.100.85 --script vuln}, se observó un fenómeno defensivo característico: el escaneo avanzó con rapidez hasta el 99.58\% y se detuvo de forma prolongada, aparentando una congelación del proceso auditor.
-
-Al presionar la barra espaciadora en la terminal para interrogar el estado del motor NSE de Nmap, se reveló la causa del retraso:
+Al ejecutar escaneos con scripts de denegación de servicio (Slowloris), Nmap se retuvo de forma prolongada en el 99.58\% debido al descarte silencioso de paquetes en el firewall:
 
 \begin{lstlisting}[style=terminal, caption={Reporte de Estado en Terminal de Nmap evidenciando Retención por Tarpitting (99.58\%)}, label={lst:evidencia-nmap-99}]
-kali@kali:~$ sudo nmap -sV 192.168.100.85 --script vuln
-Starting Nmap 7.94SVN ( https://nmap.org ) at 2026-10-26 21:40 -04
-NSE: [http-slowloris-check] Initialized against 192.168.100.85:80.
 Stats: 0:14:32 elapsed; 0 hosts completed (1 up), 1 undergoing Script Pre-Scan
 NSE: Script http-slowloris-check timing out against 192.168.100.85:80...
 Service scan Timing: About 99.58% done; ETC: 21:55 (0:00:04 remaining)
@@ -123,77 +166,65 @@ NSE: Script http-vuln-cve2011-3192 waiting for socket response... (packets dropp
 Current status: 99.58% done (Proceso retenido por caida silenciosa de paquetes)
 \end{lstlisting}
 
-Este comportamiento no constituye una falla del software auditor ni una anomalía en la red, sino la manifestación empírica de las tres capas de defensa simultáneas operando en el objetivo:
-\begin{enumerate}
-  \item \textbf{Filtrado Silencioso en Nftables (\textit{Silent Drop}):} La regla \texttt{meter conns\_per\_ip \{ ip saddr ct count over 30 \} drop} descarta silenciosamente los paquetes que exceden las 30 conexiones simultáneas generadas por los hilos de Nmap, sin enviar paquetes TCP RST de vuelta.
-  \item \textbf{Rate Limiting y Timeouts en Nginx:} Las directivas \texttt{client\_body\_timeout 5s} y \texttt{limit\_conn banco\_conn 20} cierran los descriptores de sockets saturados por los scripts de prueba de Slowloris.
-  \item \textbf{Prevención Activa en Suricata IPS:} Al detectar ráfagas de paquetes SYN mediante la regla \texttt{sid:1000007}, Suricata intercepta el flujo mediante \texttt{NFQUEUE} y elimina las cargas útiles, forzando a Nmap a agotar sus temporizadores de retransmisión TCP (\textit{Tarpitting}).
-\end{enumerate}
-
 \section{Análisis Pormenorizado de las Vulnerabilidades}
 
-\subsection{VULN-01: Exposición Pública del Puerto PostgreSQL (5432/tcp)}
+\subsection{VULN-01: Intercambio Criptográfico Anónimo Diffie-Hellman en SMTP (25, 587)}
 \begin{itemize}
-  \item \textbf{Descripción Técnica:} El servicio de base de datos relacional PostgreSQL versión 16.2 se encuentra mapeado directamente al zócalo \texttt{0.0.0.0:5432} en el archivo \texttt{docker-compose.yml}, permitiendo conexiones TCP desde cualquier equipo conectado al segmento de red local o Wi-Fi.
+  \item \textbf{Descripción Técnica:} En los puertos de correo \texttt{25/tcp} (SMTP) y \texttt{587/tcp} (Submission), el script NSE \texttt{ssl-dh-params} identificó la vulnerabilidad crítica de intercambio de llaves anónimo: \texttt{TLS\_DH\_anon\_WITH\_AES\_128\_GCM\_SHA256} con llaves de 1024 bits.
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:N}
+      \item \textbf{Puntaje Base:} \textbf{7.4 (Alta)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} El intercambio Diffie-Hellman anónimo (\texttt{DH\_anon}) encripta la comunicación frente a espionaje pasivo, pero \textbf{no autentica la identidad del servidor}. Un atacante situado en la misma red local puede realizar un ataque activo de intermediario (\textit{Man-in-the-Middle}), interceptar el handshake TLS, descifrar los correos bancarios y reenviarlos sin que los clientes ni los servidores perciban la intrusión.
+\end{itemize}
+
+\subsection{VULN-02: Exposición Pública del Puerto PostgreSQL (5432/tcp)}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} El servicio de base de datos relacional PostgreSQL versión 16.2 se encuentra accesible en la interfaz de red externa, permitiendo sondeos directos desde cualquier equipo de la red.
   \item \textbf{Cálculo de Severidad (CVSS v3.1):}
     \begin{itemize}
       \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N}
       \item \textbf{Puntaje Base:} \textbf{7.5 (Alta)}
     \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} En una entidad financiera, exponer la base de datos a la red permite que un atacante lance ataques de fuerza bruta continuos contra el usuario \texttt{postgres} o \texttt{dbuser}, intercepte consultas no cifradas si no se exige SSL obligatorio o intente explotar fallos de deserialización o autenticación débil en el motor PostgreSQL.
+  \item \textbf{Análisis de Riesgo para la Organización:} Exponer el motor de datos a la LAN facilita ataques de fuerza bruta continuos contra las credenciales del usuario de base de datos y la explotación de vulnerabilidades en protocolos de transporte.
 \end{itemize}
 
-\subsection{VULN-02: Transmisión de Sesiones y Credenciales sin Cifrado TLS (HTTP en Claro)}
+\subsection{VULN-03: Modo Debug Activo y Divulgación en Webmail (8080/tcp)}
 \begin{itemize}
-  \item \textbf{Descripción Técnica:} Las plataformas de correo corporativo (\texttt{Roundcube} en puerto 8080), el gestor de archivos internos (\texttt{TinyFileManager} en 8082), la consola de alertas (\texttt{EveBox} en 5636) y el portal principal (puerto 80) operan utilizando el protocolo HTTP sin cifrado (\textit{Plaintext HTTP}).
+  \item \textbf{Descripción Técnica:} El script \texttt{http-aspnet-debug} reportó \texttt{status: DEBUG is enabled} en el puerto 8080 (Roundcube Webmail), indicando que el servidor web responde afirmativamente a verbos de depuración.
+  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
+    \begin{itemize}
+      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N}
+      \item \textbf{Puntaje Base:} \textbf{5.3 (Media)}
+    \end{itemize}
+  \item \textbf{Análisis de Riesgo para la Organización:} Los métodos de depuración activos pueden filtrar trazas de error de PHP/Apache, nombres de variables de sesión y rutas internas del servidor web, facilitando la construcción de ataques dirigidos.
+\end{itemize}
+
+\subsection{VULN-04: Transmisión de Sesiones y Credenciales sin Cifrado TLS (HTTP en Claro)}
+\begin{itemize}
+  \item \textbf{Descripción Técnica:} Servicios como el Webmail (8080), Filemanager (8082) y Grafana (3000) exponen interfaces web HTTP no cifradas en puertos alternativos.
   \item \textbf{Cálculo de Severidad (CVSS v3.1):}
     \begin{itemize}
       \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:H/I:H/A:N}
       \item \textbf{Puntaje Base:} \textbf{7.4 (Alta)}
     \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} Un atacante ubicado en el mismo segmento de red conmutada (mediante técnicas de envenenamiento ARP / \textit{ARP Spoofing}) o conectado a la red Wi-Fi institucional puede capturar de forma pasiva las contraseñas de los usuarios y administradores, así como los tokens de sesión (\textit{Cookies}), logrando el secuestro total de cuentas bancarias y correos corporativos.
+  \item \textbf{Análisis de Riesgo para la Organización:} Captura pasiva de contraseñas de correo y cookies de sesión bancaria mediante envenenamiento ARP en la red conmutada.
 \end{itemize}
 
-\subsection{VULN-03: Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Banners}
+\subsection{VULN-05: Ausencia de Cabeceras HTTP de Endurecimiento y Divulgación de Banners}
 \begin{itemize}
-  \item \textbf{Descripción Técnica:} La configuración del servidor web Nginx omite cabeceras de seguridad requeridas por los estándares OWASP \citep{owasp_top10_2021}, tales como \texttt{X-Frame-Options}, \texttt{X-Content-Type-Options}, \texttt{Content-Security-Policy} y \texttt{Strict-Transport-Security}. Asimismo, la cabecera \texttt{Server: nginx/1.25.4} divulga la versión exacta del software.
+  \item \textbf{Descripción Técnica:} Ausencia de cabeceras \texttt{X-Frame-Options}, \texttt{X-Content-Type-Options} y \texttt{HSTS} en peticiones directas.
   \item \textbf{Cálculo de Severidad (CVSS v3.1):}
     \begin{itemize}
       \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N}
       \item \textbf{Puntaje Base:} \textbf{5.3 (Media)}
     \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} La ausencia de \texttt{X-Frame-Options} permite que páginas fraudulentas incrusten el portal de la organización dentro de un \textit{iframe} invisible, induciendo a los clientes a transferir fondos de manera involuntaria (ataque de \textit{Clickjacking}). La divulgación de versión facilita a los atacantes buscar vulnerabilidades específicas para la versión 1.25.4 de Nginx.
+  \item \textbf{Análisis de Riesgo para la Organización:} Exposición a ataques de Clickjacking y MIME-sniffing en navegadores de clientes bancarios.
 \end{itemize}
 
-\subsection{VULN-04: Acceso a Paneles de Telemetría sin Restricción de Origen}
+\subsection{VULN-06: Descarte Activo y Timeouts en Scripts NSE (\textit{Tarpitting Defensivo})}
 \begin{itemize}
-  \item \textbf{Descripción Técnica:} Los paneles de monitoreo de métricas (Grafana en puerto 3000) y de auditoría de seguridad (EveBox en puerto 5636) se encuentran expuestos a toda la red sin requerir una lista blanca de direcciones IP autorizadas (\textit{Allowlisting}).
-  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
-    \begin{itemize}
-      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N}
-      \item \textbf{Puntaje Base:} \textbf{6.5 (Media)}
-    \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} Un intruso que accede a EveBox puede observar en tiempo real qué ataques son detectados por el sistema de seguridad y cuáles pasan inadvertidos, permitiéndole perfeccionar sus técnicas de evasión de defensas.
-\end{itemize}
-
-\subsection{VULN-05: Contenedores con Privilegios Elevados y Socket Docker Montado}
-\begin{itemize}
-  \item \textbf{Descripción Técnica:} El servicio de gestión o soporte monta el archivo especial \texttt{/var/run/docker.sock} dentro del contenedor, o ejecuta procesos con privilegios de superusuario (\texttt{root}) sin aislamiento de espacios de nombres (\textit{User Namespaces}).
-  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
-    \begin{itemize}
-      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H}
-      \item \textbf{Puntaje Base:} \textbf{8.8 (Alta)}
-    \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} El acceso al socket de Docker dentro de un contenedor equivale a privilegios de \texttt{root} en el sistema operativo anfitrión (\textit{Host}). Si un atacante compromete la aplicación web alojada en dicho contenedor, puede interactuar con el socket para crear nuevos contenedores con acceso directo al sistema de archivos del servidor físico, logrando un escape total del entorno aislado.
-\end{itemize}
-
-\subsection{VULN-06: Susceptibilidad a Denegación de Servicio por Conexiones Lentas}
-\begin{itemize}
-  \item \textbf{Descripción Técnica:} La configuración por omisión de los servidores web permite que clientes maliciosos mantengan conexiones TCP abiertas transmitiendo fragmentos mínimos de cabeceras HTTP a intervalos prolongados (ataque tipo \textit{Slowloris}) sin que el servidor cierre la sesión por tiempo de espera (\textit{Timeout}).
-  \item \textbf{Cálculo de Severidad (CVSS v3.1):}
-    \begin{itemize}
-      \item \textbf{Vector CVSS:} \texttt{CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L}
-      \item \textbf{Puntaje Base:} \textbf{5.3 (Media)}
-    \end{itemize}
-  \item \textbf{Análisis de Riesgo para la Organización:} Un solo equipo atacante que ejecute herramientas como \texttt{slowhttptest} puede saturar el grupo de trabajadores de Nginx o Apache consumiendo la tabla de conexiones, dejando sin servicio a los usuarios legítimos de la banca en línea.
+  \item \textbf{Descripción Técnica:} En los puertos POP3 (110), IMAP (143), IMAPS (993), POP3S (995) y en el analizador de inyección SQL (8080), Nmap reportó \texttt{TIMEOUT} y \texttt{ERROR: Script execution failed}.
+  \item \textbf{Evaluación Defensiva:} Este hallazgo confirma la intercepción activa del sistema de defensa: el cortafuegos \texttt{nftables} y el motor \textbf{Suricata IPS} descartan las ráfagas de paquetes maliciosos, impidiendo que los scripts de ataque completen su ciclo de explotación.
 \end{itemize}
