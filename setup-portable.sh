@@ -159,9 +159,9 @@ if [[ ! -f "$DIR/services/web/tls/server.crt" ]]; then
 fi
 
 # 7. Despliegue de los Contenedores Docker
-log "[5/5] Levantando los contenedores de la infraestructura..."
+log "[5/5] Levantando y construyendo los contenedores de la infraestructura..."
 cd "$DIR"
-docker compose up -d
+docker compose up -d --build
 
 ok "Todos los servicios Docker están en ejecución."
 
@@ -181,7 +181,8 @@ ${CLR_BOLD}${CLR_GREEN}═══════════════════
   ${CLR_BOLD}Dirección IP detectada en tu red:${CLR_RESET} ${CLR_CYAN}http://${LAN_IP}/${CLR_RESET}
 
   ${CLR_BOLD}Acceso a Servicios (Desde tu PC o cualquier equipo de la LAN):${CLR_RESET}
-    • ${CLR_BOLD}Portal Web Principal :${CLR_RESET} http://${LAN_IP}/
+    • ${CLR_BOLD}Portal Web Principal :${CLR_RESET} http://${LAN_IP}/ (o https://${LAN_IP}/)
+    • ${CLR_BOLD}Uyuni Way Web (Vite) :${CLR_RESET} ${CLR_CYAN}http://${LAN_IP}:8085/${CLR_RESET} (Web independiente React)
     • ${CLR_BOLD}Webmail (Roundcube)  :${CLR_RESET} http://${LAN_IP}:8080/
     • ${CLR_BOLD}Archivos Web         :${CLR_RESET} http://${LAN_IP}:8082/
     • ${CLR_BOLD}Métricas (Grafana)   :${CLR_RESET} http://${LAN_IP}:3000/  (admin / admin)
