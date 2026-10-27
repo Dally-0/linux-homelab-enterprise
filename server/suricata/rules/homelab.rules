@@ -88,3 +88,22 @@ alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Herramienta
 drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Inyeccion SQL interceptada y descartada"; flow:to_server,established; content:"UNION"; nocase; content:"SELECT"; nocase; distance:0; classtype:web-application-attack; sid:9000070; rev:1;)
 drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Directory Traversal interceptado y descartado"; flow:to_server,established; content:"/etc/passwd"; nocase; classtype:web-application-attack; sid:9000071; rev:1;)
 drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Path traversal con ../.. descartado"; flow:to_server,established; content:"../../"; distance:0; classtype:web-application-attack; sid:9000072; rev:1;)
+
+# -------------------------------------------------------------------
+# 8. REGLAS BANCARIAS, FRAUDE Y ANTI-DDOS (Fintech / PCI-DSS)
+# -------------------------------------------------------------------
+# Detección de fuga de datos (DLP): Tarjetas Visa en texto plano en tráfico saliente
+alert tcp $HOME_NET any -> $EXTERNAL_NET $HTTP_PORTS (msg:"[BANK-DLP-ALERT] Posible fuga de numero de tarjeta Visa en texto claro"; flow:from_server,established; content:"4"; pcre:"/4[0-9]{12}(?:[0-9]{3})?/"; classtype:policy-violation; sid:9000101; rev:1;)
+
+# Bloqueo de SQL Injection en Login Bancario (' OR '1'='1)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Intento de Authentication Bypass SQLi en Home Banking"; flow:to_server,established; content:"' OR '1'='1"; nocase; classtype:web-application-attack; sid:9000102; rev:1;)
+
+# Bloqueo de robo de cookies / sesión en Home Banking (XSS document.cookie)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Intento de robo de sesion / XSS en Home Banking"; flow:to_server,established; content:"document.cookie"; nocase; classtype:web-application-attack; sid:9000103; rev:1;)
+
+# Bloqueo activo de escáner Burp Suite en operaciones bancarias
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[BANK-IPS-DROP] Herramienta automatizada no autorizada (Burp Suite)"; flow:to_server,established; content:"User-Agent|3a|"; nocase; content:"Burp"; nocase; distance:0; classtype:web-application-attack; sid:9000104; rev:1;)
+
+# Detección y bloqueo de barrido masivo de puertos (Port Sweep DoS)
+drop tcp any any -> $HOME_NET any (msg:"[BANK-IPS-DROP] Barrido masivo de puertos / Reconocimiento agresivo"; flags:S; threshold:type both, track by_src, count 30, seconds 3; classtype:attempted-recon; sid:9000105; rev:1;)
+
