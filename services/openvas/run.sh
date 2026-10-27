@@ -3,11 +3,11 @@
 # run.sh — Gestor de ciclo de vida de OpenVAS / Greenbone Community
 # ==============================================================================
 # Uso:
-#   bash run.sh start      # Levanta los contenedores en segundo plano
-#   bash run.sh stop       # Detiene y libera la memoria RAM
-#   bash run.sh logs       # Muestra los registros de arranque y sincronización
-#   bash run.sh status     # Verifica el estado de los contenedores y el puerto :9392
-#   bash run.sh create-admin  # Crea o restablece el usuario admin
+#   sudo bash run.sh start         # Descarga imágenes y levanta OpenVAS
+#   sudo bash run.sh create-admin  # Crea o restablece la clave del usuario admin
+#   sudo bash run.sh stop          # Detiene y libera la memoria RAM
+#   sudo bash run.sh logs          # Muestra los registros de arranque y sincronización
+#   sudo bash run.sh status        # Verifica el estado de los contenedores
 # ==============================================================================
 set -euo pipefail
 
@@ -27,7 +27,9 @@ case "$ACTION" in
         $COMPOSE up -d
         ok "Contenedores iniciados en segundo plano."
         info "La consola web estará disponible en: http://localhost:9392 (o http://<IP>:9392)"
-        info "Credenciales iniciales por defecto: admin / admin123"
+        info "Credenciales recomendadas: admin / admin123"
+        info "Para crear/verificar la contraseña de admin ejecuta:"
+        info "  sudo bash run.sh create-admin"
         info "Nota: Al arrancar por primera vez, OpenVAS sincroniza las firmas (NVTs); puede demorar unos minutos."
         ;;
 
@@ -53,12 +55,13 @@ case "$ACTION" in
 
     create-admin)
         log "Creando o restableciendo usuario admin en GVMD..."
-        $COMPOSE exec -it gvmd gvmd --create-user=admin --new-password=admin123 || true
+        $COMPOSE exec -u gvmd gvmd gvmd --user=admin --new-password=admin123 2>/dev/null || \
+        $COMPOSE exec -u gvmd gvmd gvmd --create-user=admin --new-password=admin123 2>/dev/null || true
         ok "Usuario 'admin' configurado con contraseña 'admin123'."
         ;;
 
     *)
-        echo "Uso: bash $0 {start|stop|status|logs|create-admin}"
+        echo "Uso: sudo bash $0 {start|stop|status|logs|create-admin}"
         exit 1
         ;;
 esac
