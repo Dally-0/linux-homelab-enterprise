@@ -18,9 +18,9 @@ CONF="/etc/kea/kea-dhcp4.conf"
 
 # ── Interfaz de escucha ──────────────────────────────────────────────
 # Antes estaba hardcodeada ("eno1") y Kea no arrancaba en cualquier otra
-# máquina (p.ej. enp0s3). Con network_mode: host, /proc y /sys son los del
+# máquina (p.ej. eth0, wlo1). Con network_mode: host, /proc y /sys son los del
 # host → se detecta la interfaz de la ruta por defecto.
-# Override manual: DHCP_INTERFACE=enp0s3 en .env
+# Override manual: DHCP_INTERFACE=eth0 en .env
 IFACE="${DHCP_INTERFACE:-}"
 if [ -z "${IFACE}" ]; then
     # Ruta por defecto en /proc/net/route: Destination (campo 2) = 0.

@@ -40,10 +40,23 @@ elif [[ -f "$ROOT/.env" ]] && grep -qE '^DHCP_INTERFACE=' "$ROOT/.env"; then
     SURICATA_IFACE="$(grep -E '^DHCP_INTERFACE=' "$ROOT/.env" | tail -1 | cut -d= -f2- | tr -d "\"\' ")"
 fi
 
-if [[ -z "${SURICATA_IFACE:-}" ]]; then
+if [[ -z "${SURICATA_IFACE:-}" ]] || ! ip link show "$SURICATA_IFACE" >/dev/null 2>&1; then
+    SURICATA_IFACE="$(ip -o -4 route get 192.168.0.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')"
+fi
+if [[ -z "${SURICATA_IFACE:-}" ]] || ! ip link show "$SURICATA_IFACE" >/dev/null 2>&1; then
     SURICATA_IFACE="$(ip -o -4 route show to default 2>/dev/null | awk '{print $5; exit}')"
 fi
-SURICATA_IFACE="${SURICATA_IFACE:-eno1}"
+if [[ -z "${SURICATA_IFACE:-}" ]] || ! ip link show "$SURICATA_IFACE" >/dev/null 2>&1; then
+    for d in /sys/class/net/*; do
+        [[ -d "$d/device" ]] || continue
+        local_dev="$(basename "$d")"
+        [[ "$local_dev" =~ ^(lo|docker|veth|br-|virbr) ]] && continue
+        SURICATA_IFACE="$local_dev"
+        break
+    done
+fi
+SURICATA_IFACE="${SURICATA_IFACE:-}"
+[[ -n "$SURICATA_IFACE" ]] || die "no se pudo detectar una interfaz de red válida para Suricata"
 
 log "[1/5] Verificando e instalando paquetes necesarios"
 PKGS=()

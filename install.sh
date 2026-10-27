@@ -10,6 +10,7 @@
 #   sudo bash install.sh --skip-ad   # omite la provisión de Active Directory
 #   sudo bash install.sh --yes       # modo desatendido
 #   sudo bash install.sh --set-ip    # auto-configura la IP fija 192.168.0.2
+#   sudo bash install.sh -i <interfaz> # fuerza la interfaz de red (ej. eth0, eno1)
 # ===================================================================
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
