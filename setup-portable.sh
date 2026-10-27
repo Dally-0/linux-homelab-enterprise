@@ -144,12 +144,19 @@ else
     ok "Archivo .env existente detectado."
 fi
 
-# Generar directorio local para shares de archivos si no existen
+# Generar directorios necesarios
 mkdir -p "$DIR/services/filemanager/data/departamentos" "$DIR/services/filemanager/data/respaldo"
 mkdir -p /srv/samba/departamentos /srv/samba/respaldo 2>/dev/null || true
 mkdir -p /var/log/suricata
 touch /var/log/suricata/eve.json /var/log/suricata/fast.log
 chmod 666 /var/log/suricata/eve.json /var/log/suricata/fast.log 2>/dev/null || true
+
+# Generar certificados TLS para el proxy web si no existen
+if [[ ! -f "$DIR/services/web/tls/server.crt" ]]; then
+    info "Generando certificados TLS para Nginx (*.sudoers.lan)..."
+    bash "$DIR/services/web/tls-gen.sh"
+    ok "Certificados TLS generados en services/web/tls/."
+fi
 
 # 7. Despliegue de los Contenedores Docker
 log "[5/5] Levantando los contenedores de la infraestructura..."
