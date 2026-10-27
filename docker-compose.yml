@@ -341,15 +341,16 @@ services:
       - tso-net
 
   # ------------------------------------------------------------------
-  # EN DESARROLLO (fases posteriores)
+  # Web Aparte: Uyuni Way (React + Vite SPA)
   # ------------------------------------------------------------------
-  # apps:         apps internas                 → services/apps      (Fase 5)
-  #
-  # MONITOREO (Zabbix): NO va acá → corre en un server Debian FÍSICO
-  # dedicado (zabbix, 192.168.0.3) con su PROPIO compose (services/zabbix).
-  # La web se accede directamente por DNS en `http://zabbix.sudoers.lan`; el
-  # registro DNS se administra desde `dc/dns-records.sh`.
-  # + server block en services/web/nginx.conf
+  uyuni-web:
+    build: ./services/uyuni-web
+    container_name: tso-uyuni-web
+    ports:
+      - "8085:80"
+    networks:
+      - tso-net
+    restart: unless-stopped
 
 # Volúmenes con nombre: los datos persisten aunque los contenedores se borren.
 volumes:
