@@ -9,7 +9,7 @@
 
 vars:
   address-groups:
-    HOME_NET: "[192.168.0.0/24, 127.0.0.0/8]"
+    HOME_NET: "[192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12, 127.0.0.0/8]"
     EXTERNAL_NET: "!$HOME_NET"
     HTTP_SERVERS: "$HOME_NET"
     SMTP_SERVERS: "$HOME_NET"
@@ -18,7 +18,7 @@ vars:
     DC_SERVERS: "$HOME_NET"
 
   port-groups:
-    HTTP_PORTS: "80, 443"
+    HTTP_PORTS: "80, 443, 1631, 3000, 8080, 8082, 9443"
     SHELLCODE_PORTS: "!80"
     SSH_PORTS: "22"
     FILE_DATA_PORTS: "[$HTTP_PORTS, 110, 143, 445]"

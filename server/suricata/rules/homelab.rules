@@ -65,3 +65,26 @@ alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Ataque Web:
 
 # Explotación de vulnerabilidad Log4j (JNDI lookup)
 alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Ataque Web: Intento de explotacion Log4Shell (jndi:ldap)"; flow:to_server,established; content:"${jndi:"; nocase; classtype:web-application-attack; sid:9000052; rev:1;)
+
+# -------------------------------------------------------------------
+# 6. DETECCIÓN DE ESCÁNERES DE VULNERABILIDADES (OpenVAS, Nikto, Nmap)
+# -------------------------------------------------------------------
+# Detección de OpenVAS / Greenbone
+alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: OpenVAS / Greenbone detectado"; flow:to_server,established; content:"User-Agent|3a|"; nocase; content:"OpenVAS"; nocase; distance:0; classtype:attempted-recon; sid:9000060; rev:1;)
+
+# Detección de Nikto Web Scanner
+alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: Nikto Web Scanner detectado"; flow:to_server,established; content:"User-Agent|3a|"; nocase; content:"Nikto"; nocase; distance:0; classtype:attempted-recon; sid:9000061; rev:1;)
+
+# Detección de Nmap Scripting Engine (NSE)
+alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Escaneo de vulnerabilidades: Nmap NSE detectado"; flow:to_server,established; content:"User-Agent|3a|"; nocase; content:"Nmap"; nocase; distance:0; classtype:attempted-recon; sid:9000062; rev:1;)
+
+# Detección de Sqlmap
+alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IDS-ALERT] Herramienta ofensiva: SQLMap detectado"; flow:to_server,established; content:"User-Agent|3a|"; nocase; content:"sqlmap"; nocase; distance:0; classtype:web-application-attack; sid:9000063; rev:1;)
+
+# -------------------------------------------------------------------
+# 7. REGLAS IPS ACTIVAS (Bloqueo en tiempo real con acción 'drop')
+# -------------------------------------------------------------------
+# En modo IPS (ips-toggle.sh --ips), Suricata descarta activamente estos paquetes vía NFQUEUE:
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Inyeccion SQL interceptada y descartada"; flow:to_server,established; content:"UNION"; nocase; content:"SELECT"; nocase; distance:0; classtype:web-application-attack; sid:9000070; rev:1;)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Directory Traversal interceptado y descartado"; flow:to_server,established; content:"/etc/passwd"; nocase; classtype:web-application-attack; sid:9000071; rev:1;)
+drop tcp any any -> $HOME_NET $HTTP_PORTS (msg:"[HOMELAB-IPS-DROP] Bloqueo en tiempo real: Path traversal con ../.. descartado"; flow:to_server,established; content:"../../"; distance:0; classtype:web-application-attack; sid:9000072; rev:1;)
