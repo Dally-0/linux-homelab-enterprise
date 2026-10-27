@@ -1,0 +1,92 @@
+# ==============================================================================
+# services/openvas/docker-compose.yml — Greenbone Community Edition (OpenVAS)
+# ==============================================================================
+# Suite completa de escaneo y gestión de vulnerabilidades para la organización.
+# Se aísla en su propio compose para no sobrecargar de memoria RAM al host
+# cuando no se realizan auditorías.
+#
+# Uso:
+#   cd services/openvas
+#   bash run.sh start      # Descarga, sincroniza y levanta OpenVAS en :9392
+#   bash run.sh stop       # Detiene los contenedores para liberar memoria
+# ==============================================================================
+
+name: openvas-auditoria
+
+services:
+  # ── Base de datos para GVMD ─────────────────────────────────────────
+  pg-gvm:
+    image: greenbone/pg-gvm:stable
+    restart: on-failure
+    environment:
+      POSTGRES_DB: gvmd
+      POSTGRES_USER: gvmd
+      POSTGRES_PASSWORD: gvmdpassword
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # ── Cache Redis para las firmas de vulnerabilidades (NVTs) ──────────
+  redis-server:
+    image: greenbone/redis-server:stable
+    restart: on-failure
+    volumes:
+      - redis_socket:/run/redis
+
+  # ── Sincronizador de Vulnerabilidades (Feeds de la comunidad) ───────
+  gvmd:
+    image: greenbone/gvmd:stable
+    restart: on-failure
+    environment:
+      GVMD_POSTGRESQL_URI: postgresql://gvmd:gvmdpassword@pg-gvm:5432/gvmd
+      GVMD_USER: ${OPENVAS_ADMIN_USER:-admin}
+      GVMD_PASSWORD: ${OPENVAS_ADMIN_PASS:-admin123}
+    volumes:
+      - gvmd_data:/var/lib/gvm
+      - ospd_openvas_socket:/run/ospd
+      - gvmd_socket:/run/gvmd
+      - vt_data:/var/lib/openvas/plugins
+    depends_on:
+      - pg-gvm
+      - redis-server
+
+  # ── Motor de Escaneo OpenVAS ────────────────────────────────────────
+  ospd-openvas:
+    image: greenbone/ospd-openvas:stable
+    restart: on-failure
+    environment:
+      REDIS_SOCKET: /run/redis/redis.sock
+    volumes:
+      - ospd_openvas_socket:/run/ospd
+      - redis_socket:/run/redis
+      - vt_data:/var/lib/openvas/plugins
+      - notus_socket:/run/notus
+    depends_on:
+      - redis-server
+
+  # ── Escáner Notus ───────────────────────────────────────────────────
+  notus-scanner:
+    image: greenbone/notus-scanner:stable
+    restart: on-failure
+    volumes:
+      - notus_socket:/run/notus
+      - gvmd_data:/var/lib/gvm
+
+  # ── Interfaz Web (Greenbone Security Assistant - GSA) ───────────────
+  gsa:
+    image: greenbone/gsa:stable
+    restart: on-failure
+    ports:
+      - "${OPENVAS_PORT:-9392}:80"
+    volumes:
+      - gvmd_socket:/run/gvmd
+    depends_on:
+      - gvmd
+
+volumes:
+  pg_data:
+  redis_socket:
+  gvmd_data:
+  ospd_openvas_socket:
+  gvmd_socket:
+  vt_data:
+  notus_socket:

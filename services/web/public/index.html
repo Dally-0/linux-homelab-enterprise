@@ -240,6 +240,12 @@
                     <span class="url">192.168.0.3 (Puerto 80)</span>
                     <span class="pill done">activo</span>
                 </a>
+                <a class="card" href="http://127.0.0.1:9392" data-port="9392" data-proto="http:">
+                    <span class="t"><span class="ico">🔍</span> Auditoría — OpenVAS</span>
+                    <span class="desc">Consola web de Greenbone para escaneo de vulnerabilidades y CVEs.</span>
+                    <span class="url">Puerto 9392 (HTTP)</span>
+                    <span class="pill done">módulo</span>
+                </a>
                 <a class="card" href="#seguridad">
                     <span class="t"><span class="ico">🗄️</span> Bases de Datos &amp; Correo</span>
                     <span class="desc">PostgreSQL (:5432) + Postfix SMTP (:25) + Dovecot IMAP (:143).</span>
@@ -296,6 +302,7 @@
                         <tr><td>TCP 5432</td><td>PostgreSQL Database</td><td>Intentos de autenticación remota y brute force</td><td>Alerta: Database connection probes</td></tr>
                         <tr><td>TCP 8080</td><td>Roundcube Webmail</td><td>CVEs de plugins, inyección en webmail</td><td>Alerta: Web application attack patterns</td></tr>
                         <tr><td>TCP 8082</td><td>Filebrowser (Archivos)</td><td>Directory traversal, acceso sin autorización</td><td>Alerta: Path traversal signatures</td></tr>
+                        <tr><td>TCP 9392</td><td>OpenVAS / Greenbone GSA</td><td>Consola de gestión de auditorías y reportes CVE</td><td>Alerta: Detección de motor de escaneo</td></tr>
                         <tr><td>TCP 9443</td><td>Portainer Docker UI</td><td>Exposición de socket Docker y gestión remota</td><td>Alerta: TLS scan a consola de orquestación</td></tr>
                     </tbody>
                 </table>
