@@ -261,6 +261,86 @@
             </div>
         </section>
 
+        <!-- Demostración interactiva Anti-SQLi / WAF -->
+        <section id="waf-demo">
+            <h2>🛡️ Demostrador de Seguridad Anti-SQLi (WAF en Nginx &amp; IPS en Suricata)</h2>
+            <p class="sub">Prueba en vivo de la defensa en profundidad: el WAF en Nginx bloquea consultas maliciosas (HTTP 403) y Suricata IPS registra la intrusión en EveBox.</p>
+            <div class="box" style="padding: 1.5rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 0.8rem;">
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.2rem;">
+                    <button type="button" onclick="probarWaf('legitima')" style="cursor: pointer; background: #1f6feb; color: white; border: none; padding: 0.6rem 1.1rem; border-radius: 0.4rem; font-weight: 600;">
+                        🟢 1. Consulta Legítima (cuenta=1001)
+                    </button>
+                    <button type="button" onclick="probarWaf('sqli_union')" style="cursor: pointer; background: #da3633; color: white; border: none; padding: 0.6rem 1.1rem; border-radius: 0.4rem; font-weight: 600;">
+                        🔴 2. Ataque SQLi: UNION SELECT
+                    </button>
+                    <button type="button" onclick="probarWaf('sqli_bypass')" style="cursor: pointer; background: #da3633; color: white; border: none; padding: 0.6rem 1.1rem; border-radius: 0.4rem; font-weight: 600;">
+                        🔴 3. Ataque SQLi: Auth Bypass (' OR '1'='1)
+                    </button>
+                    <button type="button" onclick="probarWaf('traversal')" style="cursor: pointer; background: #d29922; color: #000; border: none; padding: 0.6rem 1.1rem; border-radius: 0.4rem; font-weight: 600;">
+                        🟠 4. Ataque Path Traversal (/etc/passwd)
+                    </button>
+                </div>
+
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 0.5rem; padding: 1rem; font-family: var(--mono); font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem;">
+                        <span style="color: var(--muted);">URL Evaluada: <b id="waf-url" style="color: var(--text);">/consulta?cuenta=1001</b></span>
+                        <span id="waf-status" class="pill done" style="font-weight: bold;">Listo</span>
+                    </div>
+                    <pre id="waf-response" style="color: var(--accent); white-space: pre-wrap; margin: 0;">Presiona cualquiera de los botones superiores para enviar la petición al servidor y evaluar la respuesta del WAF.</pre>
+                </div>
+                <p style="margin-top: 0.8rem; font-size: 0.82rem; color: var(--muted);">
+                    💡 <b>Comprobación cruzada:</b> Cuando envías un ataque, el <b>WAF de Nginx</b> responde inmediatamente con <code>403 Forbidden</code> y el <b>IDS/IPS Suricata</b> registra la alerta en tiempo real en <a href="http://127.0.0.1:5636" data-port="5636">EveBox (:5636)</a>.
+                </p>
+            </div>
+        </section>
+
+        <script>
+            async function probarWaf(tipo) {
+                let url = '';
+                if (tipo === 'legitima') {
+                    url = '/consulta?cuenta=1001';
+                } else if (tipo === 'sqli_union') {
+                    url = '/consulta?cuenta=1001%27%20UNION%20SELECT%20null,username,password%20FROM%20users--';
+                } else if (tipo === 'sqli_bypass') {
+                    url = '/consulta?cuenta=1001%27%20OR%20%271%27=%271';
+                } else if (tipo === 'traversal') {
+                    url = '/consulta?cuenta=../../../../etc/passwd';
+                }
+
+                document.getElementById('waf-url').textContent = url;
+                const statusBadge = document.getElementById('waf-status');
+                const responseBox = document.getElementById('waf-response');
+
+                statusBadge.textContent = 'Enviando...';
+                statusBadge.className = 'pill';
+
+                try {
+                    const res = await fetch(url);
+                    const text = await res.text();
+
+                    if (res.status === 200) {
+                        statusBadge.textContent = 'HTTP 200 OK (Permitido)';
+                        statusBadge.className = 'pill done';
+                        statusBadge.style.background = '#238636';
+                        responseBox.style.color = '#3fb968';
+                        responseBox.textContent = text;
+                    } else if (res.status === 403) {
+                        statusBadge.textContent = 'HTTP 403 FORBIDDEN (Bloqueado por WAF)';
+                        statusBadge.className = 'pill';
+                        statusBadge.style.background = '#da3633';
+                        responseBox.style.color = '#f85149';
+                        responseBox.textContent = text;
+                    } else {
+                        statusBadge.textContent = `HTTP ${res.status}`;
+                        responseBox.textContent = text;
+                    }
+                } catch (err) {
+                    statusBadge.textContent = 'Error de Conexión';
+                    responseBox.textContent = String(err);
+                }
+            }
+        </script>
+
         <section id="equipo">
             <h2>Equipo de administración</h2>
             <p class="sub">Grupo <code>admins</code> del dominio. Usuarios del area de sistemas con acceso de gestión al server.</p>
