@@ -78,11 +78,12 @@ Para garantizar la verosimilitud de la evaluación, el entorno de pruebas fue co
 \centering
 \caption{Diagrama de Topología del Entorno de Auditoría y Escaneo}
 \label{fig:topologia-pruebas}
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
-  node distance=1.6cm and 2.4cm,
-  box/.style={rectangle, draw=black, thick, fill=gray!10, align=center, rounded corners=3pt, minimum height=1.3cm, minimum width=3.4cm, font=\small\sffamily},
-  targetbox/.style={rectangle, draw=red!70!black, very thick, fill=red!5, align=center, rounded corners=4pt, minimum height=2.2cm, minimum width=4.8cm, font=\small\sffamily},
-  scannerbox/.style={rectangle, draw=blue!70!black, very thick, fill=blue!5, align=center, rounded corners=4pt, minimum height=2.0cm, minimum width=4.4cm, font=\small\sffamily},
+  node distance=1.2cm and 1.2cm,
+  box/.style={rectangle, draw=black, thick, fill=gray!10, align=center, rounded corners=3pt, minimum height=1.3cm, minimum width=3.2cm, font=\small\sffamily},
+  targetbox/.style={rectangle, draw=red!70!black, very thick, fill=red!5, align=center, rounded corners=4pt, minimum height=2.2cm, minimum width=4.5cm, font=\small\sffamily},
+  scannerbox/.style={rectangle, draw=blue!70!black, very thick, fill=blue!5, align=center, rounded corners=4pt, minimum height=2.0cm, minimum width=4.2cm, font=\small\sffamily},
   line/.style={draw, thick, -{Latex[length=2.5mm]}},
   dashline/.style={draw, thick, dashed, red!70!black, -{Latex[length=2.5mm]}}
 ]
@@ -90,7 +91,7 @@ Para garantizar la verosimilitud de la evaluación, el entorno de pruebas fue co
   \node[scannerbox] (auditor) {
     \textbf{Estación Auditora (Kali Linux)}\\
     \footnotesize IP: \texttt{192.168.100.50}\\
-    \scriptsize Nmap, OpenVAS, Nikto, Trivy
+    \scriptsize Nmap, OWASP ZAP, Wireshark
   };
 
   \node[box, right=of auditor] (switch) {
@@ -110,7 +111,8 @@ Para garantizar la verosimilitud de la evaluación, el entorno de pruebas fue co
   \path[line] (auditor) -- node[above, font=\scriptsize\sffamily] {Tráfico de Evaluación} (switch);
   \path[line] (switch) -- node[above, font=\scriptsize\sffamily] {Sondas / Pruebas} (target);
   \path[dashline] ([yshift=-0.6cm]target.west) -- node[below, font=\scriptsize\sffamily] {Alertas IDS / Drop IPS} ([yshift=-0.6cm]switch.east);
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \fuenteAPA{Elaboración propia.}
 \end{figure}
 
